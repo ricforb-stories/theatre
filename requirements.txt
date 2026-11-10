@@ -1,0 +1,4 @@
+# Only needed for the see-through NPC cut-outs (make_cutouts.py).
+# The app itself runs on plain Python with nothing to install.
+rembg[cpu]>=2.0.60
+pillow>=10.0

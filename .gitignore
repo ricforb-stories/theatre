@@ -1,0 +1,22 @@
+# Your own campaign setup: never shared
+campaigns.json
+regions-*.json
+remote.json
+
+# Made from your portraits
+cutouts/
+
+# Your sound files (the folders and the read-me stay)
+sounds/**/*
+!sounds/README.txt
+!sounds/Loops/
+!sounds/Effects/
+!sounds/Loops/.gitkeep
+!sounds/Effects/.gitkeep
+
+# Python and system clutter
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+Thumbs.db

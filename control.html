@@ -1,0 +1,2100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/icon.png">
+<title>Theatre — DM panel</title>
+<style>
+  :root {
+    --bg: #17110f; --panel: #221915; --panel-2: #2c201b; --line: #3f2e27; --ink: #efe3d4; --muted: #a8968a;
+    --ember: #e5693a; --brass: #c9a45c; --live: #c0303f; --ready: #3fa66b; --left: 50%;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, sans-serif; font-size: 15px; display: flex; flex-direction: column; overflow: hidden; }
+  [hidden] { display: none !important; }
+  select, input, button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; }
+  select { max-width: 100%; min-width: 0; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--brass); }
+  button.on, button[aria-pressed="true"].toggle { border-color: var(--brass); background: var(--panel-2); }
+  button.black { border-color: var(--live); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 1px; }
+  kbd { background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; font-family: Consolas, monospace; font-size: 0.8rem; }
+
+  header { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--line); flex: none; }
+  header h1 { margin: 0 auto 0 0; font-family: "Palatino Linotype", Georgia, serif; font-size: 1.25rem; color: var(--ember); font-weight: 600; }
+  .status { font-size: 0.8rem; color: var(--muted); }
+  .status.ok { color: var(--ready); }
+  #prepare-toggle[aria-pressed="true"] { border-color: var(--ready); color: #bfe9cf; background: #1d2a21; }
+  .keys { position: relative; }
+  .keys summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; list-style: none; border: 1px solid var(--line); border-radius: 4px; padding: 5px 9px; }
+  .keys[open] .keys-panel { display: block; }
+  .keys-panel { display: none; position: absolute; right: 0; top: 110%; z-index: 20; width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.7; color: var(--muted); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+
+  .split { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--left) 8px minmax(0, 1fr); }
+  .pane { min-height: 0; display: flex; flex-direction: column; }
+  .pane-bar { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .pane-bar h2, .monitor-area h2 { margin: 0 6px 0 0; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); }
+  .pane-bar input[type="search"] { flex: 1 1 140px; min-width: 100px; }
+  .pane-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
+  .divider { cursor: col-resize; background: var(--line); border-left: 3px solid var(--bg); border-right: 3px solid var(--bg); }
+  .divider:hover, .divider.dragging { background: var(--brass); }
+  .right { min-height: 0; display: flex; flex-direction: column; }
+
+  .segmented { display: flex; }
+  .segmented button { border-radius: 0; }
+  .segmented button:first-child { border-radius: 4px 0 0 4px; }
+  .segmented button:last-child { border-radius: 0 4px 4px 0; border-left: none; }
+  .segmented button[aria-pressed="true"] { background: var(--panel-2); border-color: var(--brass); color: var(--ink); }
+  .segmented button[aria-pressed="false"] { color: var(--muted); }
+
+  .monitor-area { flex: none; padding: 10px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
+  .monitor-box { flex: 1 1 0; min-width: 0; }
+  .monitor-box.small { flex: 0 0 34%; }
+  .monitor-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .monitor-head h2 { margin: 0; }
+  .monitor-box.live h2 { color: var(--live); }
+  .monitor-box.ready h2 { color: var(--ready); }
+  .monitor { position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: calc(40vh * 16 / 9); background: #000; border-radius: 4px; overflow: hidden; border: 2px solid var(--line); }
+  .monitor-box.live .monitor { border-color: var(--live); }
+  .monitor-box.ready .monitor { border-color: var(--ready); }
+  .monitor .bg { position: absolute; inset: 0; display: flex; gap: 2%; align-items: center; justify-content: center; padding: 2%; }
+  .monitor .bg img { max-width: 100%; max-height: 100%; min-width: 0; flex: 1 1 0; object-fit: contain; }
+  .monitor.staged .bg { padding: 0; }
+  .monitor.staged .bg img { width: 100%; height: 100%; object-fit: cover; }
+  .monitor .actor { position: absolute; bottom: 0; height: 88%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .monitor .actor img { max-height: 100%; max-width: 44cqw; object-fit: contain; display: block; }
+  .monitor { container-type: inline-size; }
+  .monitor .actor .who .remove { margin-left: 6px; padding: 0 5px; font-size: 0.7rem; line-height: 1.3; background: rgba(0,0,0,0.6); border-color: var(--live); }
+  .monitor .actor .who { position: absolute; bottom: 4%; display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
+  .monitor .empty-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5e5048; font-family: Georgia, serif; font-size: 0.9rem; }
+  .monitor-label { margin-top: 5px; color: var(--muted); font-size: 0.85rem; min-height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #take { width: 100%; margin-top: 8px; padding: 9px; font-weight: 600; border-color: var(--ready); background: #1d2a21; color: #d9f3e2; }
+  #take:disabled { opacity: 0.45; cursor: default; }
+
+  .monitor .scene { position: absolute; inset: 0; }
+  .monitor canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .fx-bar { gap: 5px; }
+  .fx-bar .fx-kind { font-size: 0.85rem; padding: 4px 9px; }
+  .fx-bar .fx-kind[aria-pressed="true"] { border-color: #8fb7e0; background: #1c2633; color: #dcebfa; }
+  .fx-bar .segmented button { font-size: 0.8rem; padding: 4px 8px; }
+  .fx-bar .spacer { flex: 1; }
+  .fx-bar .fx-group { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 8px; }
+  #fx-shake { border-color: var(--ember); }
+  .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+  .tile { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .tile.dim { opacity: 0.55; }
+  .tile .thumb { width: 100%; }
+  .tile-caption { position: relative; display: flex; flex-direction: column; min-width: 0; padding-right: 2px; }
+  .tile-scene { font-size: 0.68rem; color: var(--brass); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-label { font-size: 0.8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile-caption .both { position: absolute; right: 0; bottom: 0; font-size: 0.7rem; padding: 0 6px; }
+  .tile-caption:has(.both) .tile-label { padding-right: 44px; }
+  .section-toggle { display: flex; align-items: center; gap: 6px; margin-right: 6px; padding: 2px 8px 2px 4px; border-color: transparent; background: none; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass); font-weight: 600; }
+  .section-toggle:hover { border-color: var(--line); }
+  .section-toggle .caret { display: inline-block; transition: transform 0.15s ease; font-size: 0.7rem; }
+  .section-toggle[aria-expanded="false"] .caret { transform: rotate(-90deg); }
+  .section-summary { display: none; color: var(--muted); font-size: 0.85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .section-summary.active { color: var(--ink); }
+  .collapsible.collapsed > :not(.keep) { display: none !important; }
+  .collapsible.collapsed .section-summary { display: block; }
+  .share-panel { width: 420px; color: var(--ink); line-height: 1.5; }
+  .share-panel p { margin: 0 0 8px; color: var(--muted); }
+  .share-panel .share-link { word-break: break-all; font-family: Consolas, monospace; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; user-select: all; }
+  .share-panel .share-row { display: flex; gap: 6px; margin: 8px 0; }
+  .share-panel .share-row input { flex: 1; min-width: 0; }
+  .share-panel .share-state { font-weight: 600; }
+  .share-panel .share-state.on { color: var(--ready); }
+  .share-panel .share-message { color: var(--ember); min-height: 1.2em; }
+  .sound-bar { gap: 5px; }
+  .sound-bar .sound-group { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 8px; }
+  .sound-bar .sound-loop, .sound-bar .sound-shot { font-size: 0.85rem; padding: 4px 9px; }
+  .sound-bar .sound-loop[aria-pressed="true"] { border-color: #7fc79a; background: #1c2a21; color: #d8f2e0; }
+  .sound-bar .sound-shot:active { border-color: var(--ember); }
+  .sound-bar label { font-size: 0.8rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .sound-bar input[type="range"] { width: 90px; padding: 0; }
+  .sound-bar .spacer { flex: 1; }
+  .scene { margin-bottom: 16px; }
+  .scene h3 { margin: 0 0 8px; font-family: "Palatino Linotype", Georgia, serif; font-size: 1.05rem; color: var(--brass); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .item { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+  .item .item-label { font-size: 0.85rem; color: var(--muted); max-width: 380px; }
+  .item .kind { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ember); margin-right: 6px; }
+  .item.dim { opacity: 0.55; }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .thumb { position: relative; width: 180px; aspect-ratio: 3 / 2; background: #000; border: 2px solid transparent; border-radius: 4px; padding: 0; overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .cut-mark, .pose .cut-mark { position: absolute; top: 3px; right: 3px; font-size: 0.62rem; background: rgba(0,0,0,0.75); color: var(--muted); padding: 0 4px; border-radius: 3px; }
+  .thumb.cursor { border-color: var(--brass); }
+  .thumb.is-ready, .pose.is-ready { border-color: var(--ready); box-shadow: 0 0 0 2px var(--ready); }
+  .thumb.is-live, .pose.is-live { border-color: var(--live); box-shadow: 0 0 0 2px var(--live); }
+  .both, .portrait { align-self: flex-start; font-size: 0.78rem; padding: 2px 8px; }
+  .search-results { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .search-results .thumb { width: 150px; }
+  .search-results .thumb span.file { position: absolute; left: 0; right: 0; bottom: 0; font-size: 0.7rem; background: rgba(0,0,0,0.7); padding: 2px 4px; text-align: left; }
+  .empty { color: var(--muted); font-family: Georgia, serif; }
+  .note { color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; }
+
+  .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 8px; }
+  .person-card { min-width: 0; padding: 6px; gap: 4px; }
+  .person-card .item-label { display: flex; flex-direction: column; gap: 1px; color: var(--ink); font-size: 0.9rem; max-width: none; }
+  .person-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .person-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person-top .portrait { flex: none; font-size: 0.68rem; padding: 0 6px; line-height: 1.5; color: var(--muted); }
+  .person-card .where { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person-card .unmet-tag { font-size: 0.7rem; color: var(--live); }
+  .poses { display: flex; gap: 5px; }
+  .pose { position: relative; flex: 1 1 0; min-width: 0; height: 100px; padding: 2px; background: #000; border: 2px solid var(--line); border-radius: 4px; }
+  .pose img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .pose.no-cut img { object-fit: cover; }
+  .count { color: var(--muted); font-size: 0.8rem; }
+
+  @media (max-width: 900px) {
+    body { overflow: auto; }
+    .split { grid-template-columns: minmax(0, 1fr); }
+    .divider { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Table Screen</h1>
+  <select id="campaign-select" aria-label="Campaign"></select>
+  <button id="prepare-toggle" class="toggle" aria-pressed="false" title="Set up place and people quietly, then show them all at once">Prepare mode: off</button>
+  <button id="open-screen">Open projector window</button>
+  <button id="fill-toggle" aria-pressed="false" title="Crop every picture to fill the projector, with no black borders">Fill screen: off (F)</button>
+  <button id="caption-toggle" aria-pressed="false">Names: off (C)</button>
+  <button id="black" class="black">Black screen (B)</button>
+  <span class="status" id="status">Projector window not open</span>
+  <details class="keys share" id="share">
+    <summary>Share</summary>
+    <div class="keys-panel share-panel" id="share-panel">Loading…</div>
+  </details>
+  <details class="keys">
+    <summary>Keys</summary>
+    <div class="keys-panel">
+      Click a picture to show it; <kbd>Shift</kbd>+click puts a second one beside it.<br>
+      Click a person's pose to stand them in front of the place (two at most); click again or ✕ to send them off.<br>
+      <b>Prepare mode:</b> clicks build the <b>Ready</b> view; <kbd>Space</kbd> or <b>Show it</b> puts it on the projector.<br>
+      <kbd>→</kbd> / <kbd>←</kbd> next / previous picture in the file · <kbd>X</kbd> clear people<br>
+      <b>Share</b> (top right): a link and password so a laptop on the same Wi-Fi can run this panel too.<br>
+      <kbd>/</kbd> search places · <kbd>P</kbd> filter people · <kbd>B</kbd> black screen (always at once, clears effects too) · <kbd>C</kbd> names · <kbd>F</kbd> fill screen (crop pictures to the whole projector; people and effects always fill)<br>
+      <b>Sounds</b> play from this window: loops run until clicked again, the others play once. Your own files go in the <b>sounds</b> folder.<br>
+      <b>Effects</b> can be mixed (one mood at a time) and stay on when you change pictures. <kbd>K</kbd> shakes the projector once, straight away.
+    </div>
+  </details>
+</header>
+
+<div class="split" id="split">
+  <section class="pane" aria-label="Places">
+    <div class="pane-bar">
+      <h2>Places</h2>
+      <div class="segmented" role="group" aria-label="Browse by">
+        <button id="mode-file" aria-pressed="true">Adventure</button>
+        <button id="mode-place" aria-pressed="false">Location</button>
+      </div>
+      <select id="file-select" aria-label="Adventure file"></select>
+      <select id="place-select" aria-label="Location" hidden></select>
+      <input id="search" type="search" placeholder="Search pictures (/)" aria-label="Search pictures">
+    </div>
+    <div class="pane-scroll">
+      <div id="search-area"></div>
+      <div id="scenes"><p class="empty">Pick an adventure file above.</p></div>
+    </div>
+  </section>
+
+  <div class="divider" id="divider" role="separator" aria-orientation="vertical" aria-label="Drag to resize" tabindex="0"></div>
+
+  <section class="right" aria-label="Projector and people">
+    <div class="monitor-area">
+      <div class="monitor-box ready" id="ready-box" hidden>
+        <div class="monitor-head"><h2>Ready — not shown yet</h2></div>
+        <div class="monitor" id="ready-monitor"></div>
+        <div class="monitor-label" id="ready-label"></div>
+      </div>
+      <div class="monitor-box live" id="live-box">
+        <div class="monitor-head"><h2>On the projector</h2></div>
+        <div class="monitor" id="live-monitor"></div>
+        <div class="monitor-label" id="live-label">Black screen</div>
+        <button id="take" hidden>Show it (Space)</button>
+      </div>
+    </div>
+    <div class="pane-bar fx-bar collapsible" id="fx-bar">
+      <button class="section-toggle keep" aria-expanded="true" aria-controls="fx-bar"><span class="caret">▾</span>Effects</button>
+      <span class="section-summary keep" id="fx-summary"></span>
+      <span id="fx-kinds" style="display:contents"></span>
+      <span class="spacer"></span>
+      <div class="segmented" role="group" aria-label="Effect strength">
+        <button data-level="light" aria-pressed="false">Light</button>
+        <button data-level="medium" aria-pressed="true">Medium</button>
+        <button data-level="heavy" aria-pressed="false">Heavy</button>
+      </div>
+      <button id="fx-shake" class="fx-kind" title="A one-off jolt on the projector (K)">Shake (K)</button>
+      <button id="fx-clear" class="fx-kind">None</button>
+    </div>
+    <div class="pane-bar sound-bar collapsible" id="sound-bar">
+      <button class="section-toggle keep" aria-expanded="true" aria-controls="sound-bar"><span class="caret">▾</span>Sounds</button>
+      <span class="section-summary keep" id="sound-summary"></span>
+      <span id="sound-buttons" style="display:contents"></span>
+      <span class="spacer"></span>
+      <label title="Rain, storm, snow, ash, embers, underwater, lightning rail and airship bring their own sound; lightning brings thunder">
+        <input type="checkbox" id="sound-match"> Match effects
+      </label>
+      <label title="Which computer's speakers the sounds come out of">Play on
+        <select id="sound-target">
+          <option value="here">this laptop</option>
+          <option value="projector">projector PC</option>
+        </select>
+      </label>
+      <label title="Volume of loops (rain, crowds, music)">Loops <input type="range" id="sound-loop-volume" min="0" max="1" step="0.05" value="0.8"></label>
+      <label title="Volume of one-shot sounds (thunder, swords, doors)">Once <input type="range" id="sound-shot-volume" min="0" max="1" step="0.05" value="0.8"></label>
+      <button id="sound-stop" class="sound-shot keep">Stop sounds</button>
+    </div>
+    <div class="pane-bar">
+      <h2>People</h2>
+      <div class="segmented" role="group" aria-label="Which people">
+        <button id="scope-scene" aria-pressed="true" title="People at the place on screen and in the open file">In scene</button>
+        <button id="scope-all" aria-pressed="false">All</button>
+      </div>
+      <input id="people-filter" type="search" placeholder="Name or place (P)" aria-label="Filter people by name or place">
+      <select id="people-region" aria-label="Region"></select>
+      <select id="people-place" aria-label="Place"></select>
+      <select id="people-met" aria-label="Met or not">
+        <option value="all">Met + not met</option>
+        <option value="met">Met only</option>
+        <option value="unmet">Not met yet</option>
+      </select>
+      <span class="count" id="people-count"></span>
+    </div>
+    <div class="pane-scroll" id="people-grid"><p class="empty">Loading people…</p></div>
+  </section>
+</div>
+
+<script src="/fx.js"></script>
+<script src="/sound.js"></script>
+<script src="/relay.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const STORE_KEY = "theatre-control";
+
+  // carry over settings saved under the app's earlier name
+  try {
+
+    if (!localStorage.getItem(STORE_KEY) && localStorage.getItem("netherdeep-screen-control")) {
+      localStorage.setItem(STORE_KEY, localStorage.getItem("netherdeep-screen-control"));
+    }
+  } catch (error) {
+    /* no saved settings; fine */
+  }
+  const NO_PLACE = "Elsewhere / unknown";
+  const STAGE_SPOTS = { 1: ["50%"], 2: ["27%", "73%"] };
+  const channel = window.TableRelay(function (message) {
+    handleMessage(message);
+  });
+
+  const campaignSelect = document.getElementById("campaign-select");
+  const prepareToggle = document.getElementById("prepare-toggle");
+  const captionToggle = document.getElementById("caption-toggle");
+  const statusLine = document.getElementById("status");
+  const split = document.getElementById("split");
+  const divider = document.getElementById("divider");
+  const fileSelect = document.getElementById("file-select");
+  const placeSelect = document.getElementById("place-select");
+  const modeFileButton = document.getElementById("mode-file");
+  const modePlaceButton = document.getElementById("mode-place");
+  const searchInput = document.getElementById("search");
+  const searchArea = document.getElementById("search-area");
+  const scenesArea = document.getElementById("scenes");
+  const readyBox = document.getElementById("ready-box");
+  const readyMonitor = document.getElementById("ready-monitor");
+  const readyLabel = document.getElementById("ready-label");
+  const liveBox = document.getElementById("live-box");
+  const liveMonitor = document.getElementById("live-monitor");
+  const liveLabel = document.getElementById("live-label");
+  const takeButton = document.getElementById("take");
+  const scopeSceneButton = document.getElementById("scope-scene");
+  const scopeAllButton = document.getElementById("scope-all");
+  const peopleFilter = document.getElementById("people-filter");
+  const peopleRegion = document.getElementById("people-region");
+  const peoplePlace = document.getElementById("people-place");
+  const peopleMet = document.getElementById("people-met");
+  const peopleCount = document.getElementById("people-count");
+  const peopleGrid = document.getElementById("people-grid");
+
+  let campaign = "";
+  let mode = "file";
+  let locations = [];
+  let flatList = [];
+  let fileCast = [];
+  let cursorIndex = -1;
+  let searchTimer = null;
+  let cutouts = new Set();
+  let people = [];
+  let scope = "scene";
+  let lastSceneKey = "";
+  let prepare = false;
+  let captionOn = false;
+  let fillOn = false;
+  const fillToggle = document.getElementById("fill-toggle");
+  let live = emptyState();
+  let ready = emptyState();
+  const fxKinds = document.getElementById("fx-kinds");
+  const fxLevelButtons = [...document.querySelectorAll("#fx-bar [data-level]")];
+  const monitorFx = {};
+  const sounds = window.TableSound();
+  const soundButtons = document.getElementById("sound-buttons");
+  const soundMatch = document.getElementById("sound-match");
+  const soundLoopVolume = document.getElementById("sound-loop-volume");
+  const soundShotVolume = document.getElementById("sound-shot-volume");
+  const fxSummary = document.getElementById("fx-summary");
+  const soundSummary = document.getElementById("sound-summary");
+  // Which built-in loops each effect brings when "Match effects" is on.
+  const EFFECT_SOUNDS = {
+    rain: ["rain"],
+    storm: ["rain", "wind"],
+    snow: ["wind"],
+    ash: ["wind"],
+    embers: ["fire"],
+    underwater: ["waves"],
+    rail: ["rail"],
+    airship: ["airship"],
+  };
+  let projectorConnected = false;
+  const soundTarget = document.getElementById("sound-target");
+  let projectorPlaying = [];
+
+  // Every sound call goes through here, to this laptop's speakers or the projector PC's.
+  const soundOut = {
+    onProjector: function () {
+      return soundTarget.value === "projector";
+    },
+    send: function (message) {
+      channel.post(Object.assign({ type: "sound" }, message));
+    },
+    isPlaying: function (id) {
+      return this.onProjector() ? projectorPlaying.includes(id) : sounds.isPlaying(id);
+    },
+    playingNames: function () {
+
+      if (!this.onProjector()) {
+        return sounds.playingNames();
+      }
+
+      const names = {};
+      sounds.builtInLoops.concat(sounds.eberronLoops).forEach(function (pair) {
+        names[pair[0]] = pair[1];
+      });
+      sounds.files.forEach(function (file) {
+        names[file.id] = file.name;
+      });
+      return projectorPlaying.map(function (id) {
+        return names[id] || id;
+      });
+    },
+    toggleLoop: function (id) {
+      this.onProjector() ? this.send({ op: "toggle", id: id }) : sounds.toggleLoop(id);
+    },
+    play: function (id) {
+      this.onProjector() ? this.send({ op: "play", id: id }) : sounds.play(id);
+    },
+    matchEffects: function (ids) {
+      this.onProjector() ? this.send({ op: "match", ids: ids }) : sounds.matchEffects(ids);
+    },
+    setVolume: function (kind, value) {
+      sounds.setVolume(kind, value);
+
+      if (this.onProjector()) {
+        this.send({ op: "volume", kind: kind, value: value });
+      }
+    },
+    stopAll: function () {
+      sounds.stopAll();
+      this.send({ op: "stop" });
+    },
+    heard: function (ids) {
+      projectorPlaying = ids;
+      markSoundButtons();
+    },
+    // bring the projector up to date: its sound files, volumes and the effect sounds
+    resync: function () {
+
+      if (!this.onProjector()) {
+        return;
+      }
+
+      this.send({ op: "files", files: sounds.files });
+      this.send({ op: "volume", kind: "loops", value: Number(soundLoopVolume.value) });
+      this.send({ op: "volume", kind: "shots", value: Number(soundShotVolume.value) });
+      matchSoundsToEffects();
+    },
+  };
+  let soundFilesKey = "";
+
+  // ---------- settings ----------
+
+  function loadSettings() {
+    try {
+      return JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function saveSettings(settings) {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign(loadSettings(), settings)));
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
+  // ---------- urls and names ----------
+
+  function imageUrl(imageName, imageCampaign) {
+    return "/img/" + encodeURIComponent(imageCampaign || campaign) + "/" + encodeURIComponent(imageName);
+  }
+
+  function cutoutUrl(imageName, imageCampaign) {
+    return "/cutout/" + encodeURIComponent(imageCampaign || campaign) + "/" + encodeURIComponent(imageName);
+  }
+
+  function withCampaign(url) {
+    return url + (url.includes("?") ? "&" : "?") + "campaign=" + encodeURIComponent(campaign);
+  }
+
+  function stemOf(imageName) {
+    return imageName.replace(/\.[a-z]+$/i, "");
+  }
+
+  function placeNameOf(imageName) {
+    return stemOf(imageName).replace(/ \d+$/, "");
+  }
+
+  function hasCutout(imageName) {
+    return cutouts.has(stemOf(imageName).toLowerCase() + ".png");
+  }
+
+  function isPortrait(imageName) {
+    return people.some(function (person) {
+      return person.poses.some(function (pose) {
+        return pose.image === imageName;
+      });
+    });
+  }
+
+  function personName(label) {
+    return label.replace(/\.[a-z]+$/i, "").replace(/ \d+$/, "");
+  }
+
+  // ---------- what's on screen: live (projector) and ready (prepare mode) ----------
+
+  function emptyState() {
+    return { images: [], label: "", campaign: campaign, people: [], fx: [], fxLevel: "medium" };
+  }
+
+  function editing() {
+    return prepare ? ready : live;
+  }
+
+  function matchSoundsToEffects() {
+
+    if (!soundMatch.checked) {
+      soundOut.matchEffects([]);
+      return;
+    }
+
+    const wanted = [];
+    (live.fx || []).forEach(function (kind) {
+      (EFFECT_SOUNDS[kind] || []).forEach(function (soundId) {
+
+        if (!wanted.includes(soundId)) {
+          wanted.push(soundId);
+        }
+      });
+    });
+    soundOut.matchEffects(wanted);
+  }
+
+  function thunderAfterLightning(nearness) {
+
+    if (!soundMatch.checked || !(live.fx || []).includes("storm")) {
+      return;
+    }
+
+    // light arrives first; the closer the strike, the sooner the thunder
+    const delay = nearness >= 1 ? 300 + Math.random() * 700 : 1400 + Math.random() * 1800;
+    setTimeout(function () {
+      soundOut.play("thunder");
+    }, delay);
+  }
+
+  function renderSoundButtons() {
+    soundButtons.innerHTML = "";
+    const addGroup = function (label) {
+      const groupLabel = document.createElement("span");
+      groupLabel.className = "sound-group";
+      groupLabel.textContent = label;
+      soundButtons.appendChild(groupLabel);
+    };
+    const addLoop = function (id, label) {
+      const button = document.createElement("button");
+      button.className = "sound-loop";
+      button.dataset.sound = id;
+      button.textContent = label;
+      button.title = "Loop: click to start, click again to stop";
+      button.setAttribute("aria-pressed", String(soundOut.isPlaying(id)));
+      button.addEventListener("click", function () {
+        soundOut.toggleLoop(id);
+      });
+      soundButtons.appendChild(button);
+    };
+    const addShot = function (id, label) {
+      const button = document.createElement("button");
+      button.className = "sound-shot";
+      button.textContent = label;
+      button.title = "Plays once";
+      button.addEventListener("click", function () {
+        soundOut.play(id);
+      });
+      soundButtons.appendChild(button);
+    };
+    addGroup("Loops");
+    sounds.builtInLoops.forEach(function (pair) {
+      addLoop(pair[0], pair[1]);
+    });
+    addGroup("Once");
+    sounds.builtInShots.forEach(function (pair) {
+      addShot(pair[0], pair[1]);
+    });
+    addGroup("Eberron");
+    sounds.eberronLoops.forEach(function (pair) {
+      addLoop(pair[0], pair[1]);
+    });
+    sounds.eberronShots.forEach(function (pair) {
+      addShot(pair[0], pair[1]);
+    });
+    let lastGroup = "";
+    sounds.files.forEach(function (file) {
+
+      if (file.group !== lastGroup) {
+        lastGroup = file.group;
+        addGroup(file.group);
+      }
+
+      if (file.loop) {
+        addLoop(file.id, file.name);
+      } else {
+        addShot(file.id, file.name);
+      }
+    });
+  }
+
+  function markSoundButtons() {
+    soundButtons.querySelectorAll(".sound-loop").forEach(function (button) {
+      button.setAttribute("aria-pressed", String(soundOut.isPlaying(button.dataset.sound)));
+    });
+    const playing = soundOut.playingNames();
+    soundSummary.textContent = playing.length ? "Playing: " + playing.join(", ") : "Quiet";
+    soundSummary.classList.toggle("active", playing.length > 0);
+  }
+
+  async function loadSoundFiles() {
+
+    try {
+      const files = await fetch("/api/sounds").then(function (response) {
+        return response.json();
+      });
+      const key = JSON.stringify(files.map(function (file) {
+        return file.id;
+      }));
+
+      if (key !== soundFilesKey) {
+        soundFilesKey = key;
+        sounds.files = files;
+        renderSoundButtons();
+        soundOut.send({ op: "files", files: files });
+      }
+    } catch (error) {
+      return;
+    }
+  }
+
+  function send() {
+    matchSoundsToEffects();
+    channel.post({ type: "show", state: Object.assign({}, live, { caption: captionOn, fill: fillOn }) });
+  }
+
+  function setEditing(next) {
+
+    if (prepare) {
+      ready = next;
+    } else {
+      live = next;
+      send();
+    }
+
+    render();
+  }
+
+  function take() {
+
+    if (!prepare) {
+      return;
+    }
+
+    live = JSON.parse(JSON.stringify(ready));
+    send();
+    render();
+  }
+
+  function blackScreen() {
+    live = emptyState();
+    send();
+    render();
+  }
+
+  function showPicture(images, label, addBeside) {
+    const state = editing();
+    const sameCampaign = state.campaign === campaign;
+    const portrait = images.some(isPortrait);
+
+    if (addBeside && state.images.length === 1 && sameCampaign && !state.images.includes(images[0])) {
+      setEditing({
+        images: [state.images[0], images[0]],
+        label: state.label + " · " + label,
+        campaign: campaign,
+        people: [],
+        fx: state.fx || [],
+        fxLevel: state.fxLevel || "medium"
+      });
+      return;
+    }
+
+    // A new place keeps the people standing there; a full portrait clears them.
+    const keptPeople = portrait || !sameCampaign ? [] : state.people.slice();
+    setEditing({
+      images: images.slice(0, 2),
+      label: label,
+      campaign: campaign,
+      people: keptPeople,
+      fx: state.fx || [],
+      fxLevel: state.fxLevel || "medium"
+    });
+  }
+
+  function togglePerson(imageName, label) {
+
+    if (!hasCutout(imageName)) {
+      statusLine.textContent = "No cut-out yet for " + imageName;
+      statusLine.classList.remove("ok");
+      return;
+    }
+
+    const state = editing();
+    const staged = (state.campaign === campaign ? state.people : []).slice();
+    const name = personName(label);
+    const sameImage = staged.findIndex(function (person) {
+      return person.image === imageName;
+    });
+    const samePerson = staged.findIndex(function (person) {
+      return person.name === name;
+    });
+
+    if (sameImage >= 0) {
+      staged.splice(sameImage, 1);
+    } else if (samePerson >= 0) {
+      staged[samePerson] = { image: imageName, name: name };
+    } else {
+
+      if (staged.length >= 2) {
+        staged.shift();
+      }
+
+      staged.push({ image: imageName, name: name });
+    }
+
+    const stateCampaign = state.images.length ? state.campaign : campaign;
+    setEditing(Object.assign({}, state, { people: staged, campaign: stateCampaign }));
+  }
+
+  function removePerson(imageName) {
+    const state = editing();
+    setEditing(Object.assign({}, state, {
+      people: state.people.filter(function (person) {
+        return person.image !== imageName;
+      })
+    }));
+  }
+
+  function clearPeople() {
+    setEditing(Object.assign({}, editing(), { people: [] }));
+  }
+
+  // ---------- drawing ----------
+
+  function monitorEffects(element) {
+
+    if (!monitorFx[element.id]) {
+      const canvas = document.createElement("canvas");
+      canvas.className = "fx";
+      const isLive = element.id === "live-monitor";
+      const options = isLive ? {
+        onLightning: function (nearness) {
+
+          if (!projectorConnected) {
+            thunderAfterLightning(nearness);
+          }
+        }
+      } : {};
+      monitorFx[element.id] = { canvas: canvas, effects: window.TableFx(canvas, options) };
+    }
+
+    return monitorFx[element.id];
+  }
+
+  function drawMonitor(element, state, editable) {
+    const preview = monitorEffects(element);
+    element.innerHTML = "";
+    const staged = state.people || [];
+    element.classList.toggle("staged", fillOn || staged.length > 0 || (state.fx || []).length > 0);
+    const sceneBox = document.createElement("div");
+    sceneBox.className = "scene";
+    element.appendChild(sceneBox);
+    const background = document.createElement("div");
+    background.className = "bg";
+    state.images.forEach(function (imageName) {
+      const image = document.createElement("img");
+      image.src = imageUrl(imageName, state.campaign);
+      image.alt = imageName;
+      background.appendChild(image);
+    });
+    sceneBox.appendChild(background);
+    const spots = STAGE_SPOTS[staged.length] || [];
+    staged.forEach(function (person, index) {
+      const actor = document.createElement("div");
+      actor.className = "actor";
+      actor.style.left = spots[index];
+      const image = document.createElement("img");
+      image.src = cutoutUrl(person.image, state.campaign);
+      image.alt = person.name;
+      actor.appendChild(image);
+      const who = document.createElement("span");
+      who.className = "who";
+      who.appendChild(document.createTextNode(person.name));
+      actor.appendChild(who);
+
+      if (editable) {
+        const remove = document.createElement("button");
+        remove.className = "remove";
+        remove.textContent = "✕";
+        remove.title = "Send " + person.name + " off";
+        remove.addEventListener("click", function () {
+          removePerson(person.image);
+        });
+        who.appendChild(remove);
+      }
+
+      sceneBox.appendChild(actor);
+    });
+
+    element.appendChild(preview.canvas);
+    preview.effects.set(state.fx || [], state.fxLevel, sceneBox);
+    preview.scene = sceneBox;
+
+    if (!state.images.length && !staged.length && !(state.fx || []).length) {
+      const note = document.createElement("div");
+      note.className = "empty-note";
+      note.textContent = "Black";
+      element.appendChild(note);
+    }
+  }
+
+  function fxName(kind) {
+    const entry = window.TableFx.KINDS.find(function (pair) {
+      return pair[0] === kind;
+    });
+    return entry ? entry[1].toLowerCase() : kind;
+  }
+
+  function toggleEffect(kind) {
+    const state = editing();
+    const current = state.fx || [];
+    const moods = window.TableFx.MOODS;
+    const withoutOtherMoods = moods.includes(kind) ? current.filter(function (other) {
+      return !moods.includes(other);
+    }) : current;
+    const next = current.includes(kind) ? current.filter(function (other) {
+      return other !== kind;
+    }) : withoutOtherMoods.concat([kind]);
+    setEditing(Object.assign({}, state, { fx: next }));
+  }
+
+  function shakeScreen() {
+    channel.post({ type: "shake" });
+    const livePreview = monitorFx["live-monitor"];
+
+    if (livePreview && livePreview.scene) {
+      livePreview.effects.shake(livePreview.scene);
+    }
+  }
+
+  function setEffectLevel(level) {
+    setEditing(Object.assign({}, editing(), { fxLevel: level }));
+  }
+
+  function clearEffects() {
+    setEditing(Object.assign({}, editing(), { fx: [] }));
+  }
+
+  function renderFxBar() {
+    const state = editing();
+    const active = state.fx || [];
+    const names = active.map(function (kind) {
+      const entry = window.TableFx.KINDS.find(function (pair) {
+        return pair[0] === kind;
+      });
+      return entry ? entry[1] : kind;
+    });
+    fxSummary.textContent = names.length ? names.join(", ") + " · " + (state.fxLevel || "medium") : "None";
+    fxSummary.classList.toggle("active", names.length > 0);
+    fxKinds.querySelectorAll("button").forEach(function (button) {
+      button.setAttribute("aria-pressed", String(active.includes(button.dataset.kind)));
+    });
+    fxLevelButtons.forEach(function (button) {
+      button.setAttribute("aria-pressed", String(button.dataset.level === (state.fxLevel || "medium")));
+    });
+  }
+
+  function describe(state) {
+    const names = (state.people || []).map(function (person) {
+      return person.name;
+    });
+    const placeLabel = state.images.length ? state.label : "Black screen";
+    const withPeople = names.length ? placeLabel + " — with " + names.join(" and ") : placeLabel;
+    const effects = (state.fx || []).map(fxName);
+    return effects.length ? withPeople + " · " + effects.join(", ") + " (" + (state.fxLevel || "medium") + ")" : withPeople;
+  }
+
+  function sameState(first, second) {
+    const firstKey = [first.images, first.people, first.fx || [], first.fxLevel || "medium"];
+    const secondKey = [second.images, second.people, second.fx || [], second.fxLevel || "medium"];
+    return JSON.stringify(firstKey) === JSON.stringify(secondKey);
+  }
+
+  function render() {
+    readyBox.hidden = !prepare;
+    takeButton.hidden = !prepare;
+    liveBox.classList.toggle("small", prepare);
+    drawMonitor(liveMonitor, live, !prepare);
+    liveLabel.textContent = describe(live);
+
+    if (prepare) {
+      drawMonitor(readyMonitor, ready, true);
+      readyLabel.textContent = describe(ready);
+      takeButton.disabled = sameState(ready, live);
+      takeButton.textContent = takeButton.disabled ? "Ready matches the projector" : "Show it (Space)";
+    }
+
+    markPictures();
+    renderFxBar();
+    const sceneKey = sceneImages().join("|");
+
+    if (scope === "scene" && sceneKey !== lastSceneKey) {
+      renderPeople();
+    }
+
+    lastSceneKey = sceneKey;
+  }
+
+  function markPictures() {
+    const liveImages = live.images.concat(live.people.map(function (person) {
+      return person.image;
+    }));
+    const readyImages = prepare ? ready.images.concat(ready.people.map(function (person) {
+      return person.image;
+    })) : [];
+    document.querySelectorAll(".thumb, .pose").forEach(function (element) {
+      element.classList.toggle("is-live", liveImages.includes(element.dataset.image));
+      element.classList.toggle("is-ready", !liveImages.includes(element.dataset.image) && readyImages.includes(element.dataset.image));
+    });
+  }
+
+  // ---------- places pane ----------
+
+  function markCutout(thumb) {
+    const existing = thumb.querySelector(".cut-mark");
+    const available = isPortrait(thumb.dataset.image) && hasCutout(thumb.dataset.image);
+
+    if (available && !existing) {
+      const mark = document.createElement("span");
+      mark.className = "cut-mark";
+      mark.textContent = "cut-out";
+      thumb.appendChild(mark);
+    }
+
+    if (!available && existing) {
+      existing.remove();
+    }
+  }
+
+  function makeThumb(imageName, label) {
+    const button = document.createElement("button");
+    button.className = "thumb";
+    button.dataset.image = imageName;
+    button.title = imageName;
+    const image = document.createElement("img");
+    image.loading = "lazy";
+    image.src = imageUrl(imageName);
+    image.alt = label;
+    button.appendChild(image);
+    markCutout(button);
+    button.addEventListener("click", function (event) {
+
+      if (event.altKey) {
+        event.preventDefault();
+        togglePerson(imageName, label);
+        return;
+      }
+
+      showPicture([imageName], label, event.shiftKey);
+      cursorIndex = flatList.findIndex(function (entry) {
+        return entry.image === imageName;
+      });
+      markCursor();
+    });
+    return button;
+  }
+
+  function markCursor() {
+    document.querySelectorAll("#scenes .thumb").forEach(function (thumb, index) {
+      thumb.classList.toggle("cursor", index === cursorIndex);
+    });
+  }
+
+  function renderScenes(allScenes, emptyText) {
+    scenesArea.innerHTML = "";
+    flatList = [];
+    fileCast = [];
+    cursorIndex = -1;
+    const scenes = [];
+    allScenes.forEach(function (scene) {
+      const placeItems = [];
+      scene.items.forEach(function (item) {
+
+        if (item.kind === "tip") {
+          fileCast.push({ heading: scene.heading, label: item.label, images: item.images });
+        } else {
+          placeItems.push(item);
+        }
+      });
+
+      if (placeItems.length) {
+        scenes.push({ heading: scene.heading, items: placeItems });
+      }
+    });
+
+    if (!scenes.length) {
+      scenesArea.innerHTML = '<p class="empty">' + emptyText + "</p>";
+      render();
+      return;
+    }
+
+    // One tight grid of picture tiles, each captioned with its scene, instead of a heading and box per scene.
+    const grid = document.createElement("div");
+    grid.className = "tile-grid";
+    scenes.forEach(function (scene) {
+      scene.items.forEach(function (item) {
+        item.images.forEach(function (imageName, index) {
+          const tile = document.createElement("div");
+          tile.className = "tile" + (item.dim ? " dim" : "");
+          tile.appendChild(makeThumb(imageName, item.label));
+          flatList.push({ image: imageName, label: item.label });
+          const caption = document.createElement("div");
+          caption.className = "tile-caption";
+          caption.title = scene.heading + (item.label && item.label !== scene.heading ? " — " + item.label : "");
+          const sceneLine = document.createElement("span");
+          sceneLine.className = "tile-scene";
+          sceneLine.textContent = scene.heading;
+          caption.appendChild(sceneLine);
+          const labelLine = document.createElement("span");
+          labelLine.className = "tile-label";
+          labelLine.textContent = item.label + (item.images.length > 1 ? " (" + (index + 1) + "/" + item.images.length + ")" : "");
+          caption.appendChild(labelLine);
+
+          if (item.images.length === 2 && index === 0) {
+            const both = document.createElement("button");
+            both.className = "both";
+            both.textContent = "Both";
+            both.title = "Show both pictures side by side";
+            both.addEventListener("click", function () {
+              showPicture(item.images, item.label, false);
+            });
+            caption.appendChild(both);
+          }
+
+          tile.appendChild(caption);
+          grid.appendChild(tile);
+        });
+      });
+    });
+    scenesArea.appendChild(grid);
+    lastSceneKey = "";
+    render();
+  }
+
+  async function loadFiles() {
+    searchInput.value = "";
+    searchArea.innerHTML = "";
+    const groups = await fetch(withCampaign("/api/files")).then(function (response) {
+      return response.json();
+    });
+    fileSelect.innerHTML = '<option value="">Choose an adventure file…</option>';
+    groups.forEach(function (group) {
+      const optionGroup = document.createElement("optgroup");
+      optionGroup.label = group.group;
+      group.files.forEach(function (file) {
+        const option = document.createElement("option");
+        option.value = file.path;
+        option.textContent = file.name;
+        optionGroup.appendChild(option);
+      });
+      fileSelect.appendChild(optionGroup);
+    });
+    const remembered = loadSettings()["file:" + campaign];
+    const known = [...fileSelect.options].some(function (option) {
+      return option.value === remembered;
+    });
+
+    if (remembered && known) {
+      fileSelect.value = remembered;
+      loadScenes(remembered);
+    } else {
+      loadScenes("");
+    }
+  }
+
+  async function loadScenes(relativePath) {
+
+    if (!relativePath) {
+      renderScenes([], "Pick an adventure file above.");
+      return;
+    }
+
+    const fileSetting = {};
+    fileSetting["file:" + campaign] = relativePath;
+    saveSettings(fileSetting);
+    const scenes = await fetch(withCampaign("/api/scenes?file=" + encodeURIComponent(relativePath))).then(function (response) {
+      return response.json();
+    });
+
+    if (mode !== "file") {
+      return;
+    }
+
+    renderScenes(scenes, 'No "Show the players" pictures in this file.');
+  }
+
+  async function loadLocations() {
+    const loaded = await fetch(withCampaign("/api/locations")).then(function (response) {
+      return response.json();
+    });
+
+    if (mode !== "place") {
+      return;
+    }
+
+    locations = loaded.filter(function (place) {
+      return place.images.length > 0;
+    });
+    placeSelect.innerHTML = '<option value="">Choose a location…</option>';
+    let groupElement = null;
+    let groupName = null;
+    locations.forEach(function (place, index) {
+
+      if (place.group !== groupName) {
+        groupName = place.group;
+        groupElement = document.createElement("optgroup");
+        groupElement.label = groupName;
+        placeSelect.appendChild(groupElement);
+      }
+
+      const option = document.createElement("option");
+      option.value = String(index);
+      const counts = [];
+
+      if (place.images.length) {
+        counts.push(place.images.length + (place.images.length === 1 ? " picture" : " pictures"));
+      }
+
+      option.textContent = place.name + (counts.length ? "  (" + counts.join(", ") + ")" : "");
+      groupElement.appendChild(option);
+    });
+    const remembered = loadSettings()["place:" + campaign];
+    const rememberedIndex = locations.findIndex(function (place) {
+      return place.name === remembered;
+    });
+
+    if (rememberedIndex >= 0) {
+      placeSelect.value = String(rememberedIndex);
+      showPlace(rememberedIndex);
+    } else {
+      renderScenes([], "Pick a location above.");
+    }
+  }
+
+  function showPlace(index) {
+    const place = locations[index];
+
+    if (!place) {
+      renderScenes([], "Pick a location above.");
+      return;
+    }
+
+    const placeSetting = {};
+    placeSetting["place:" + campaign] = place.name;
+    saveSettings(placeSetting);
+    const scenes = [];
+
+    if (place.images.length) {
+      scenes.push({
+        heading: place.name,
+        items: place.images.map(function (imageName) {
+          return { label: place.name, kind: "example", images: [imageName] };
+        })
+      });
+    }
+
+    renderScenes(scenes, "No pictures for " + place.name + ".");
+  }
+
+  function setMode(nextMode) {
+    mode = nextMode;
+    saveSettings({ mode: mode });
+    modeFileButton.setAttribute("aria-pressed", String(mode === "file"));
+    modePlaceButton.setAttribute("aria-pressed", String(mode === "place"));
+    fileSelect.hidden = mode !== "file";
+    placeSelect.hidden = mode !== "place";
+
+    if (mode === "place") {
+      loadLocations();
+    } else {
+      loadFiles();
+    }
+  }
+
+  async function runSearch() {
+    const text = searchInput.value.trim();
+
+    if (!text) {
+      searchArea.innerHTML = "";
+      return;
+    }
+
+    const results = await fetch(withCampaign("/api/search?q=" + encodeURIComponent(text))).then(function (response) {
+      return response.json();
+    });
+    searchArea.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.className = "search-results";
+
+    if (!results.length) {
+      wrap.innerHTML = '<p class="empty">No pictures match "' + text.replace(/</g, "&lt;") + '".</p>';
+    }
+
+    results.forEach(function (imageName) {
+      const thumb = makeThumb(imageName, personName(imageName));
+      const name = document.createElement("span");
+      name.className = "file";
+      name.textContent = stemOf(imageName);
+      thumb.appendChild(name);
+      wrap.appendChild(thumb);
+    });
+    searchArea.appendChild(wrap);
+    markPictures();
+  }
+
+  // ---------- people pane ----------
+
+  async function loadCutouts() {
+
+    if (!campaign) {
+      return;
+    }
+
+    try {
+      const names = await fetch(withCampaign("/api/cutouts")).then(function (response) {
+        return response.json();
+      });
+      const changed = names.length !== cutouts.size || names.some(function (name) {
+        return !cutouts.has(name);
+      });
+      cutouts = new Set(names);
+
+      if (changed || !people.length) {
+        people = await fetch(withCampaign("/api/people")).then(function (response) {
+          return response.json();
+        });
+        refreshPeopleFilters();
+        renderPeople();
+      }
+    } catch (error) {
+      return;
+    }
+
+    document.querySelectorAll(".thumb").forEach(markCutout);
+  }
+
+  function placeOf(person) {
+    return person.place || NO_PLACE;
+  }
+
+  function fillSelect(select, firstLabel, values) {
+    const previous = select.value;
+    select.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = firstLabel;
+    select.appendChild(first);
+    values.forEach(function (value) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      select.appendChild(option);
+    });
+    select.value = values.includes(previous) ? previous : "";
+  }
+
+  function refreshPeopleFilters() {
+    const regions = [...new Set(people.map(function (person) {
+      return person.region;
+    }).filter(Boolean))].sort();
+    fillSelect(peopleRegion, "All regions", regions);
+    const places = [...new Set(people.filter(function (person) {
+      return !peopleRegion.value || person.region === peopleRegion.value;
+    }).map(placeOf))].sort(function (first, second) {
+
+      if (first === NO_PLACE || second === NO_PLACE) {
+        return first === NO_PLACE ? 1 : -1;
+      }
+
+      return first.localeCompare(second);
+    });
+    fillSelect(peoplePlace, "All places", places);
+  }
+
+  function sceneImages() {
+    return editing().images.concat(flatList.map(function (entry) {
+      return entry.image;
+    }), fileCast.map(function (entry) {
+      return entry.images.join("+");
+    }));
+  }
+
+  function inScene() {
+    const cast = [];
+    const seen = new Set();
+    fileCast.forEach(function (entry) {
+      const match = people.find(function (person) {
+        return person.poses.some(function (pose) {
+          return entry.images.includes(pose.image);
+        });
+      });
+      const key = match ? "note:" + match.name : "file:" + entry.images[0];
+
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+
+      if (match) {
+        const filePoses = match.poses.filter(function (pose) {
+          return entry.images.includes(pose.image);
+        });
+        cast.push(Object.assign({}, match, {
+          name: entry.label,
+          noteName: match.name,
+          group: entry.heading,
+          poses: filePoses.length ? filePoses : match.poses
+        }));
+        return;
+      }
+
+      cast.push({
+        name: entry.label,
+        noteName: "",
+        met: true,
+        location: "",
+        place: "",
+        region: "",
+        group: entry.heading,
+        poses: entry.images.map(function (imageName) {
+          return { image: imageName, cutout: hasCutout(imageName) };
+        })
+      });
+    });
+    const placeNames = new Set(editing().images.map(placeNameOf));
+
+    if (mode === "place" && locations[Number(placeSelect.value)]) {
+      placeNames.add(locations[Number(placeSelect.value)].name);
+    }
+
+    people.forEach(function (person) {
+      const place = person.place.replace(/ \(around\)$/, "");
+
+      if (!placeNames.has(person.place) && !placeNames.has(place)) {
+        return;
+      }
+
+      if (seen.has("note:" + person.name)) {
+        return;
+      }
+
+      seen.add("note:" + person.name);
+      cast.push(Object.assign({}, person, { noteName: person.name, group: "At " + place }));
+    });
+    return cast;
+  }
+
+  function setScope(nextScope) {
+    scope = nextScope;
+    saveSettings({ peopleScope: scope });
+    scopeSceneButton.setAttribute("aria-pressed", String(scope === "scene"));
+    scopeAllButton.setAttribute("aria-pressed", String(scope === "all"));
+    renderPeople();
+  }
+
+  function renderPeople() {
+    const scrollTop = peopleGrid.scrollTop;
+    let pool = people;
+
+    if (scope === "scene") {
+      pool = inScene();
+
+      if (!pool.length) {
+        peopleCount.textContent = "0 of " + people.length;
+        peopleGrid.innerHTML = "";
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        const placeNames = editing().images.map(placeNameOf);
+        empty.textContent = placeNames.length
+          ? "Nobody in the notes is at " + placeNames.join(" or ") + ", and no one is pictured in the open file."
+          : "Show a place, or open a file with people in it, to see who's in the scene.";
+        peopleGrid.appendChild(empty);
+        const everyone = document.createElement("button");
+        everyone.textContent = "Show everyone";
+        everyone.addEventListener("click", function () {
+          setScope("all");
+        });
+        peopleGrid.appendChild(everyone);
+        return;
+      }
+    }
+
+    const words = peopleFilter.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const shown = pool.filter(function (person) {
+      const haystack = [person.name, person.noteName || "", person.location, person.place, person.region].join(" ").toLowerCase();
+
+      if (peopleRegion.value && person.region !== peopleRegion.value) {
+        return false;
+      }
+
+      if (peoplePlace.value && placeOf(person) !== peoplePlace.value) {
+        return false;
+      }
+
+      if (peopleMet.value === "met" && !person.met) {
+        return false;
+      }
+
+      if (peopleMet.value === "unmet" && person.met) {
+        return false;
+      }
+
+      return words.every(function (word) {
+        return haystack.includes(word);
+      });
+    });
+    const groups = new Map();
+    const byScene = scope === "scene";
+    shown.forEach(function (person) {
+      const key = byScene ? person.group : placeOf(person);
+
+      if (!groups.has(key)) {
+        groups.set(key, { place: key, region: byScene ? "" : person.region, people: [] });
+      }
+
+      groups.get(key).people.push(person);
+    });
+    const ordered = byScene ? [...groups.values()] : [...groups.values()].sort(function (first, second) {
+
+      if ((first.place === NO_PLACE) !== (second.place === NO_PLACE)) {
+        return first.place === NO_PLACE ? 1 : -1;
+      }
+
+      if (Boolean(first.region) !== Boolean(second.region)) {
+        return first.region ? -1 : 1;
+      }
+
+      return (first.region || "").localeCompare(second.region || "") || first.place.localeCompare(second.place);
+    });
+    peopleCount.textContent = shown.length + " of " + people.length;
+    peopleGrid.innerHTML = "";
+
+    if (!shown.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = people.length ? "Nobody matches." : "No people yet.";
+      peopleGrid.appendChild(empty);
+      return;
+    }
+
+    ordered.forEach(function (group) {
+      const section = document.createElement("section");
+      section.className = "scene";
+      const heading = document.createElement("h3");
+      heading.textContent = group.place + (group.region && group.region !== group.place ? " · " + group.region : "");
+      section.appendChild(heading);
+      const items = document.createElement("div");
+      items.className = "items person-grid";
+
+      if (!byScene) {
+        group.people.sort(function (first, second) {
+
+          if (first.met !== second.met) {
+            return first.met ? -1 : 1;
+          }
+
+          return first.name.localeCompare(second.name);
+        });
+      }
+
+      group.people.forEach(function (person) {
+        items.appendChild(makePersonCard(person));
+      });
+      section.appendChild(items);
+      peopleGrid.appendChild(section);
+    });
+    peopleGrid.scrollTop = scrollTop;
+    markPictures();
+  }
+
+  function makePersonCard(person) {
+    const card = document.createElement("div");
+    card.className = "item person-card" + (person.met ? "" : " dim");
+    const label = document.createElement("div");
+    label.className = "item-label";
+    const top = document.createElement("div");
+    top.className = "person-top";
+    const name = document.createElement("span");
+    name.className = "person-name";
+    name.textContent = person.name;
+    name.title = person.name;
+    top.appendChild(name);
+    const portrait = document.createElement("button");
+    portrait.className = "portrait";
+    portrait.textContent = "Portrait";
+    portrait.title = person.poses.length > 1 ? "Show the full portrait (both poses)" : "Show the full portrait";
+    portrait.addEventListener("click", function () {
+      const images = person.poses.map(function (pose) {
+        return pose.image;
+      });
+      showPicture(images.slice(0, 2), person.name, false);
+    });
+    top.appendChild(portrait);
+    label.appendChild(top);
+    const details = document.createElement("span");
+    details.className = "where";
+    const detailParts = [];
+
+    if (person.noteName && person.noteName !== person.name) {
+      detailParts.push("note: " + person.noteName);
+    }
+
+    if (person.location) {
+      detailParts.push(person.location);
+    }
+
+    if (!person.met) {
+      const unmet = document.createElement("span");
+      unmet.className = "unmet-tag";
+      unmet.textContent = "not met · ";
+      details.appendChild(unmet);
+    }
+
+    details.appendChild(document.createTextNode(detailParts.join(" · ")));
+    details.title = (person.met ? "" : "not met yet · ") + detailParts.join(" · ");
+    label.appendChild(details);
+    card.appendChild(label);
+    const poses = document.createElement("div");
+    poses.className = "poses";
+    person.poses.forEach(function (pose) {
+      const button = document.createElement("button");
+      button.className = "pose" + (pose.cutout ? "" : " no-cut");
+      button.dataset.image = pose.image;
+      button.title = pose.cutout ? "Stand " + person.name + " in front of the place" : "No cut-out yet: shows the portrait";
+      const image = document.createElement("img");
+      image.loading = "lazy";
+      image.src = pose.cutout ? cutoutUrl(pose.image) : imageUrl(pose.image);
+      image.alt = person.name;
+      button.appendChild(image);
+
+      if (!pose.cutout) {
+        const mark = document.createElement("span");
+        mark.className = "cut-mark";
+        mark.textContent = "no cut-out";
+        button.appendChild(mark);
+      }
+
+      button.addEventListener("click", function () {
+
+        if (pose.cutout) {
+          togglePerson(pose.image, person.name);
+        } else {
+          showPicture([pose.image], person.name, false);
+        }
+      });
+      poses.appendChild(button);
+    });
+    card.appendChild(poses);
+    return card;
+  }
+
+  // ---------- header controls ----------
+
+  function setPrepare(nextPrepare) {
+    prepare = nextPrepare;
+    saveSettings({ prepare: prepare });
+    prepareToggle.setAttribute("aria-pressed", String(prepare));
+    prepareToggle.textContent = "Prepare mode: " + (prepare ? "on" : "off");
+
+    if (prepare) {
+      ready = JSON.parse(JSON.stringify(live));
+    }
+
+    lastSceneKey = "";
+    render();
+  }
+
+  function setFill(nextFill) {
+    fillOn = nextFill;
+    saveSettings({ fill: fillOn });
+    fillToggle.setAttribute("aria-pressed", String(fillOn));
+    fillToggle.textContent = "Fill screen: " + (fillOn ? "on" : "off") + " (F)";
+    fillToggle.classList.toggle("on", fillOn);
+    send();
+    render();
+  }
+
+  function setCaption(nextCaption) {
+    captionOn = nextCaption;
+    saveSettings({ caption: captionOn });
+    captionToggle.setAttribute("aria-pressed", String(captionOn));
+    captionToggle.textContent = "Names: " + (captionOn ? "on" : "off") + " (C)";
+    captionToggle.classList.toggle("on", captionOn);
+    send();
+  }
+
+  async function loadCampaigns() {
+    const campaigns = await fetch("/api/campaigns").then(function (response) {
+      return response.json();
+    });
+    campaignSelect.innerHTML = "";
+    campaigns.forEach(function (name) {
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = name;
+      campaignSelect.appendChild(option);
+    });
+    const remembered = loadSettings().campaign;
+    campaign = campaigns.includes(remembered) ? remembered : campaigns[0];
+    campaignSelect.value = campaign;
+    document.getElementById("title").textContent = campaign + " Screen";
+    await loadCutouts();
+    setMode(loadSettings().mode === "place" ? "place" : "file");
+  }
+
+  // ---------- resizable split ----------
+
+  function setLeftWidth(percent) {
+    const clamped = Math.max(25, Math.min(75, percent));
+    split.style.setProperty("--left", clamped + "%");
+    return clamped;
+  }
+
+  divider.addEventListener("pointerdown", function (event) {
+    divider.setPointerCapture(event.pointerId);
+    divider.classList.add("dragging");
+  });
+
+  divider.addEventListener("pointermove", function (event) {
+
+    if (!divider.classList.contains("dragging")) {
+      return;
+    }
+
+    const bounds = split.getBoundingClientRect();
+    setLeftWidth((event.clientX - bounds.left) / bounds.width * 100);
+  });
+
+  divider.addEventListener("pointerup", function (event) {
+    divider.classList.remove("dragging");
+    divider.releasePointerCapture(event.pointerId);
+    const bounds = split.getBoundingClientRect();
+    const percent = setLeftWidth((event.clientX - bounds.left) / bounds.width * 100);
+    saveSettings({ leftWidth: percent });
+  });
+
+  divider.addEventListener("keydown", function (event) {
+
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    const current = loadSettings().leftWidth || 50;
+    const percent = setLeftWidth(current + (event.key === "ArrowRight" ? 3 : -3));
+    saveSettings({ leftWidth: percent });
+  });
+
+  // ---------- events ----------
+
+  fileSelect.addEventListener("change", function () {
+    loadScenes(fileSelect.value);
+  });
+
+  placeSelect.addEventListener("change", function () {
+    showPlace(Number(placeSelect.value));
+  });
+
+  campaignSelect.addEventListener("change", function () {
+    campaign = campaignSelect.value;
+    saveSettings({ campaign: campaign });
+    document.getElementById("title").textContent = campaign + " Screen";
+    people = [];
+    loadCutouts();
+    setMode(mode);
+  });
+
+  modeFileButton.addEventListener("click", function () {
+    setMode("file");
+  });
+
+  modePlaceButton.addEventListener("click", function () {
+    setMode("place");
+  });
+
+  searchInput.addEventListener("input", function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearch, 200);
+  });
+
+  scopeSceneButton.addEventListener("click", function () {
+    setScope("scene");
+  });
+
+  scopeAllButton.addEventListener("click", function () {
+    setScope("all");
+  });
+
+  peopleFilter.addEventListener("input", renderPeople);
+
+  peopleRegion.addEventListener("change", function () {
+    refreshPeopleFilters();
+    renderPeople();
+  });
+
+  peoplePlace.addEventListener("change", renderPeople);
+
+  peopleMet.addEventListener("change", function () {
+    saveSettings({ peopleMet: peopleMet.value });
+    renderPeople();
+  });
+
+  prepareToggle.addEventListener("click", function () {
+    setPrepare(!prepare);
+  });
+
+  takeButton.addEventListener("click", take);
+
+  let lastGroup = "";
+
+  window.TableFx.KINDS.forEach(function (pair) {
+
+    if (pair[2] && pair[2] !== lastGroup) {
+      lastGroup = pair[2];
+      const groupLabel = document.createElement("span");
+      groupLabel.className = "fx-group";
+      groupLabel.textContent = pair[2] === "Mood" ? "Mood (one)" : pair[2];
+      fxKinds.appendChild(groupLabel);
+    }
+
+    const button = document.createElement("button");
+    button.className = "fx-kind";
+    button.dataset.kind = pair[0];
+    button.textContent = pair[1];
+    button.setAttribute("aria-pressed", "false");
+    button.addEventListener("click", function () {
+      toggleEffect(pair[0]);
+    });
+    fxKinds.appendChild(button);
+  });
+
+  fxLevelButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      setEffectLevel(button.dataset.level);
+    });
+  });
+
+  document.getElementById("fx-clear").addEventListener("click", clearEffects);
+
+  sounds.onChange = markSoundButtons;
+
+  soundTarget.addEventListener("change", function () {
+    // stop everything where it was playing, then carry on at the new place
+    sounds.stopAll();
+    soundOut.send({ op: "stop" });
+    projectorPlaying = [];
+    saveSettings({ soundTarget: soundTarget.value });
+    soundOut.resync();
+    matchSoundsToEffects();
+    markSoundButtons();
+  });
+
+  soundMatch.addEventListener("change", function () {
+    saveSettings({ soundMatch: soundMatch.checked });
+    matchSoundsToEffects();
+  });
+
+  soundLoopVolume.addEventListener("input", function () {
+    soundOut.setVolume("loops", Number(soundLoopVolume.value));
+    saveSettings({ soundLoopVolume: Number(soundLoopVolume.value) });
+  });
+
+  soundShotVolume.addEventListener("input", function () {
+    soundOut.setVolume("shots", Number(soundShotVolume.value));
+    saveSettings({ soundShotVolume: Number(soundShotVolume.value) });
+  });
+
+  // Collapsible sections: remembered, with a one-line status while closed.
+  document.querySelectorAll(".collapsible").forEach(function (section) {
+    const toggle = section.querySelector(".section-toggle");
+    const settingKey = "collapsed:" + section.id;
+    const apply = function (collapsed) {
+      section.classList.toggle("collapsed", collapsed);
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+    };
+    apply(Boolean(loadSettings()[settingKey]));
+    toggle.addEventListener("click", function () {
+      const collapsed = !section.classList.contains("collapsed");
+      apply(collapsed);
+      const setting = {};
+      setting[settingKey] = collapsed;
+      saveSettings(setting);
+    });
+  });
+
+  document.getElementById("sound-stop").addEventListener("click", function () {
+    soundOut.stopAll();
+  });
+  document.getElementById("fx-shake").addEventListener("click", shakeScreen);
+
+  document.getElementById("open-screen").addEventListener("click", function () {
+    window.open("/screen", "theatre-projector", "popup,width=1280,height=800");
+  });
+
+  document.getElementById("black").addEventListener("click", blackScreen);
+
+  fillToggle.addEventListener("click", function () {
+    setFill(!fillOn);
+  });
+
+  captionToggle.addEventListener("click", function () {
+    setCaption(!captionOn);
+  });
+
+  function adoptLiveFromOtherController(state) {
+    // Another control window (on another laptop) changed the projector: show it here too.
+    live = {
+      images: state.images || [],
+      label: state.label || "",
+      campaign: state.campaign || campaign,
+      people: state.people || [],
+      fx: state.fx || [],
+      fxLevel: state.fxLevel || "medium",
+    };
+    captionOn = Boolean(state.caption);
+    captionToggle.setAttribute("aria-pressed", String(captionOn));
+    captionToggle.textContent = "Names: " + (captionOn ? "on" : "off") + " (C)";
+    captionToggle.classList.toggle("on", captionOn);
+    fillOn = Boolean(state.fill);
+    fillToggle.setAttribute("aria-pressed", String(fillOn));
+    fillToggle.textContent = "Fill screen: " + (fillOn ? "on" : "off") + " (F)";
+    fillToggle.classList.toggle("on", fillOn);
+
+    if (!prepare) {
+      ready = JSON.parse(JSON.stringify(live));
+    }
+
+    render();
+  }
+
+  function handleMessage(message) {
+
+    if (message.type === "lightning") {
+      projectorConnected = true;
+      thunderAfterLightning(message.nearness);
+    }
+
+    if (message.type === "screen-ready") {
+      projectorConnected = true;
+      statusLine.textContent = "Projector window connected";
+      statusLine.classList.add("ok");
+      soundOut.resync();
+
+      if (live.images.length || (live.people || []).length || (live.fx || []).length) {
+        send();
+      }
+    }
+
+    if (message.type === "show" && message.state) {
+      adoptLiveFromOtherController(message.state);
+    }
+
+    if (message.type === "sound-status") {
+      soundOut.heard(message.playing || []);
+    }
+  }
+
+  channel.onConnect = function () {
+    channel.post({ type: "hello" });
+  };
+
+  document.addEventListener("keydown", function (event) {
+    const typing = event.target.matches("input, select, textarea");
+
+    if (typing) {
+
+      if (event.key === "Escape") {
+        event.target.blur();
+      }
+
+      return;
+    }
+
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    if (event.key === " " && prepare) {
+      event.preventDefault();
+      take();
+      return;
+    }
+
+    if (event.key === "b" || event.key === "B") {
+      blackScreen();
+    }
+
+    if (event.key === "c" || event.key === "C") {
+      setCaption(!captionOn);
+    }
+
+    if (event.key === "k" || event.key === "K") {
+      shakeScreen();
+    }
+
+    if (event.key === "f" || event.key === "F") {
+      setFill(!fillOn);
+    }
+
+    if (event.key === "x" || event.key === "X") {
+      clearPeople();
+    }
+
+    if (event.key === "/") {
+      event.preventDefault();
+      searchInput.focus();
+    }
+
+    if (event.key === "p" || event.key === "P") {
+      event.preventDefault();
+      peopleFilter.focus();
+      peopleFilter.select();
+    }
+
+    if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && flatList.length) {
+      event.preventDefault();
+      const step = event.key === "ArrowRight" ? 1 : -1;
+      cursorIndex = Math.max(0, Math.min(flatList.length - 1, cursorIndex + step));
+      const entry = flatList[cursorIndex];
+      showPicture([entry.image], entry.label, false);
+      markCursor();
+      const thumbs = document.querySelectorAll("#scenes .thumb");
+
+      if (thumbs[cursorIndex]) {
+        thumbs[cursorIndex].scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }
+  });
+
+  // ---------- sharing with other laptops ----------
+
+  const sharePanel = document.getElementById("share-panel");
+  let shareMessage = "";
+
+  async function loadShare() {
+    let status;
+
+    try {
+      status = await fetch("/api/remote").then(function (response) {
+        return response.json();
+      });
+    } catch (error) {
+      sharePanel.textContent = "Couldn't reach the server.";
+      return;
+    }
+
+    sharePanel.innerHTML = "";
+
+    if (!status.local) {
+      const note = document.createElement("p");
+      note.textContent = "You're on another computer, signed in with the password. Everything you do here shows on the projector.";
+      sharePanel.appendChild(note);
+      return;
+    }
+
+    const state = document.createElement("p");
+    state.innerHTML = 'Other laptops: <span class="share-state' + (status.enabled ? ' on">on' : '">off') + "</span>";
+    sharePanel.appendChild(state);
+
+    if (status.enabled) {
+      const linkNote = document.createElement("p");
+      linkNote.textContent = "On a laptop on the same Wi-Fi, open:";
+      sharePanel.appendChild(linkNote);
+      (status.links.length ? status.links : ["(no network found)"]).forEach(function (link) {
+        const row = document.createElement("p");
+        const code = document.createElement("span");
+        code.className = "share-link";
+        code.textContent = link;
+        row.appendChild(code);
+        sharePanel.appendChild(row);
+      });
+      const passwordNote = document.createElement("p");
+      passwordNote.textContent = "and type the password. Changing the password signs other laptops out.";
+      sharePanel.appendChild(passwordNote);
+      const projectorNote = document.createElement("p");
+      projectorNote.textContent = "Projector-only computer (no password, can't control anything, sees only what's on screen):";
+      sharePanel.appendChild(projectorNote);
+      (status.projectorLinks || []).forEach(function (link) {
+        const linkRow = document.createElement("p");
+        const code = document.createElement("span");
+        code.className = "share-link";
+        code.textContent = link;
+        linkRow.appendChild(code);
+        sharePanel.appendChild(linkRow);
+      });
+    } else {
+      const offNote = document.createElement("p");
+      offNote.textContent = "Set a password to let other laptops on this Wi-Fi open the DM panel. This computer never needs it.";
+      sharePanel.appendChild(offNote);
+    }
+
+    const row = document.createElement("div");
+    row.className = "share-row";
+    const input = document.createElement("input");
+    input.type = "password";
+    input.autocomplete = "new-password";
+    input.placeholder = status.enabled ? "New password" : "Password (4+ characters)";
+    input.setAttribute("aria-label", "Password for other laptops");
+    const save = document.createElement("button");
+    save.textContent = status.enabled ? "Change" : "Turn on";
+    row.appendChild(input);
+    row.appendChild(save);
+    sharePanel.appendChild(row);
+    const message = document.createElement("p");
+    message.className = "share-message";
+    message.textContent = shareMessage;
+    sharePanel.appendChild(message);
+
+    async function update(body) {
+      const response = await fetch("/api/remote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      shareMessage = response.ok ? (body.off ? "Turned off." : "Password saved.") : await response.text();
+      loadShare();
+    }
+
+    save.addEventListener("click", function () {
+      update({ password: input.value });
+    });
+    input.addEventListener("keydown", function (event) {
+
+      if (event.key === "Enter") {
+        update({ password: input.value });
+      }
+    });
+
+    if (status.enabled) {
+      const off = document.createElement("button");
+      off.textContent = "Turn off other laptops";
+      off.addEventListener("click", function () {
+        update({ off: true });
+      });
+      sharePanel.appendChild(off);
+    }
+  }
+
+  document.getElementById("share").addEventListener("toggle", function (event) {
+
+    if (event.target.open) {
+      shareMessage = "";
+      loadShare();
+    }
+  });
+
+  // ---------- start ----------
+
+  const settings = loadSettings();
+  setLeftWidth(settings.leftWidth || 50);
+  peopleMet.value = settings.peopleMet || "all";
+  scope = settings.peopleScope === "all" ? "all" : "scene";
+  scopeSceneButton.setAttribute("aria-pressed", String(scope === "scene"));
+  scopeAllButton.setAttribute("aria-pressed", String(scope === "all"));
+  fillOn = Boolean(settings.fill);
+  fillToggle.setAttribute("aria-pressed", String(fillOn));
+  fillToggle.textContent = "Fill screen: " + (fillOn ? "on" : "off") + " (F)";
+  fillToggle.classList.toggle("on", fillOn);
+  captionOn = Boolean(settings.caption);
+  captionToggle.setAttribute("aria-pressed", String(captionOn));
+  captionToggle.textContent = "Names: " + (captionOn ? "on" : "off") + " (C)";
+  captionToggle.classList.toggle("on", captionOn);
+  prepare = Boolean(settings.prepare);
+  prepareToggle.setAttribute("aria-pressed", String(prepare));
+  prepareToggle.textContent = "Prepare mode: " + (prepare ? "on" : "off");
+  render();
+  soundTarget.value = settings.soundTarget === "projector" ? "projector" : "here";
+  soundMatch.checked = settings.soundMatch !== false;
+  const oldVolume = settings.soundVolume === undefined ? 0.8 : settings.soundVolume;
+  soundLoopVolume.value = settings.soundLoopVolume === undefined ? oldVolume : settings.soundLoopVolume;
+  soundShotVolume.value = settings.soundShotVolume === undefined ? oldVolume : settings.soundShotVolume;
+  sounds.setVolume("loops", Number(soundLoopVolume.value));
+  sounds.setVolume("shots", Number(soundShotVolume.value));
+  renderSoundButtons();
+  markSoundButtons();
+  loadSoundFiles();
+  setInterval(loadSoundFiles, 20000);
+  loadCampaigns();
+  setInterval(loadCutouts, 20000);
+})();
+</script>
+</body>
+</html>
