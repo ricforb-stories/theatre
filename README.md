@@ -249,8 +249,11 @@ visited, and adds boxes for new pictures.
   Effects and Sounds fold away (click their title) to a one-line summary.
 - **People.** *In scene* shows the people of the open file and of the place on screen (with the names the players
   know); *All* shows everyone, with filters for name, region, place and met. Click a pose to stand that person in
-  front of the place (two at most); click again or ✕ to send them off. **Portrait** shows their full picture
+  front of the place (up to four); click again or ✕ to send them off. **Portrait** shows their full picture
   instead.
+- **Arrange people on the monitor:** drag a person to move them (sideways, or up to stand further back), turn
+  the mouse wheel over them to make them bigger or smaller, click ⇋ in their name tag to turn them around, and
+  double-click to put them back. The projector follows as you drag.
 - **Prepare mode** (top): your clicks build a green **Ready** view without touching the projector; press **Space**
   or **Show it** to reveal everything at once. **B** (black screen) always works immediately.
 - **Fill screen (F)** crops pictures to fill the projector (people and effects always fill it).

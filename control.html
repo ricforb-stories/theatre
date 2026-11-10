@@ -68,6 +68,9 @@
   .monitor .actor { position: absolute; bottom: 0; height: 88%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
   .monitor .actor img { max-height: 100%; max-width: 44cqw; object-fit: contain; display: block; }
   .monitor { container-type: inline-size; }
+  .monitor .actor.movable { cursor: grab; touch-action: none; }
+  .monitor .actor.movable:active { cursor: grabbing; }
+  .monitor .actor img { pointer-events: none; }
   .monitor .actor .who .remove { margin-left: 6px; padding: 0 5px; font-size: 0.7rem; line-height: 1.3; background: rgba(0,0,0,0.6); border-color: var(--live); }
   .monitor .actor .who { position: absolute; bottom: 4%; display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
   .monitor .empty-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5e5048; font-family: Georgia, serif; font-size: 0.9rem; }
@@ -177,7 +180,7 @@
     <summary>Keys</summary>
     <div class="keys-panel">
       Click a picture to show it; <kbd>Shift</kbd>+click puts a second one beside it.<br>
-      Click a person's pose to stand them in front of the place (two at most); click again or ✕ to send them off.<br>
+      Click a person's pose to stand them in front of the place (up to four); click again or ✕ to send them off. On the monitor: drag a person to move them, mouse wheel to resize, ⇋ to turn them around, double-click to put them back.<br>
       <b>Prepare mode:</b> clicks build the <b>Ready</b> view; <kbd>Space</kbd> or <b>Show it</b> puts it on the projector.<br>
       <kbd>→</kbd> / <kbd>←</kbd> next / previous picture in the file · <kbd>X</kbd> clear people<br>
       <b>Share</b> (top right): a link and password so a laptop on the same Wi-Fi can run this panel too.<br>
@@ -292,7 +295,19 @@
     /* no saved settings; fine */
   }
   const NO_PLACE = "Elsewhere / unknown";
-  const STAGE_SPOTS = { 1: ["50%"], 2: ["27%", "73%"] };
+  // Where a person stands: their own spot if the DM moved them, otherwise an even spread.
+  const STAGE_SPOTS = { 1: [50], 2: [27, 73], 3: [20, 50, 80], 4: [14, 38, 62, 86] };
+  const STAGE_SCALES = { 1: 1, 2: 1, 3: 0.85, 4: 0.75 };
+
+  function placement(person, index, count) {
+    const spots = STAGE_SPOTS[count] || STAGE_SPOTS[4];
+    return {
+      left: person.x !== undefined ? person.x * 100 : spots[Math.min(index, spots.length - 1)],
+      bottom: (person.y || 0) * 100,
+      scale: person.scale || STAGE_SCALES[count] || 0.75,
+      flip: Boolean(person.flip),
+    };
+  }
   const channel = window.TableRelay(function (message) {
     handleMessage(message);
   });
@@ -711,7 +726,7 @@
       staged[samePerson] = { image: imageName, name: name };
     } else {
 
-      if (staged.length >= 2) {
+      if (staged.length >= 4) {
         staged.shift();
       }
 
@@ -774,21 +789,30 @@
       background.appendChild(image);
     });
     sceneBox.appendChild(background);
-    const spots = STAGE_SPOTS[staged.length] || [];
     staged.forEach(function (person, index) {
       const actor = document.createElement("div");
       actor.className = "actor";
-      actor.style.left = spots[index];
       const image = document.createElement("img");
       image.src = cutoutUrl(person.image, state.campaign);
       image.alt = person.name;
+      image.draggable = false;
       actor.appendChild(image);
+      placeActor(actor, image, placement(person, index, staged.length));
       const who = document.createElement("span");
       who.className = "who";
       who.appendChild(document.createTextNode(person.name));
       actor.appendChild(who);
 
       if (editable) {
+        makeMovable(element, actor, image, person, index, staged.length);
+        const flip = document.createElement("button");
+        flip.className = "remove flip";
+        flip.textContent = "⇋";
+        flip.title = "Turn " + person.name + " to face the other way";
+        flip.addEventListener("click", function () {
+          updatePerson(person.image, { flip: !person.flip }, true);
+        });
+        who.appendChild(flip);
         const remove = document.createElement("button");
         remove.className = "remove";
         remove.textContent = "✕";
@@ -867,6 +891,119 @@
     });
     fxLevelButtons.forEach(function (button) {
       button.setAttribute("aria-pressed", String(button.dataset.level === (state.fxLevel || "medium")));
+    });
+  }
+
+  function placeActor(actor, image, place) {
+    actor.style.left = place.left + "%";
+    actor.style.bottom = place.bottom + "%";
+    actor.style.height = (88 * place.scale) + "%";
+    actor.style.zIndex = String(100 - Math.round(place.bottom));
+    image.style.maxWidth = (44 * place.scale) + "cqw";
+    image.style.transform = place.flip ? "scaleX(-1)" : "";
+  }
+
+  // Change one person on stage. commit: redraw the panel too (otherwise only the projector/state follow, for dragging).
+  function updatePerson(imageName, changes, commit) {
+    const state = editing();
+    const staged = (state.people || []).map(function (person) {
+
+      if (person.image !== imageName) {
+        return person;
+      }
+
+      const changed = Object.assign({}, person, changes);
+      Object.keys(changes).forEach(function (key) {
+
+        if (changes[key] === undefined) {
+          delete changed[key];
+        }
+      });
+      return changed;
+    });
+    const next = Object.assign({}, state, { people: staged });
+
+    if (commit) {
+      setEditing(next);
+      return;
+    }
+
+    if (prepare) {
+      ready = next;
+    } else {
+      live = next;
+      send();
+    }
+  }
+
+  // Drag to move, mouse wheel to resize, double-click to put back.
+  function makeMovable(monitor, actor, image, person, index, count) {
+    const start = placement(person, index, count);
+    let dragging = null;
+    let lastSent = 0;
+
+    actor.classList.add("movable");
+    actor.title = "Drag to move · mouse wheel to resize · double-click to put back";
+
+    actor.addEventListener("pointerdown", function (event) {
+
+      if (event.target.closest("button")) {
+        return;
+      }
+
+      event.preventDefault();
+      actor.setPointerCapture(event.pointerId);
+      dragging = { pointerX: event.clientX, pointerY: event.clientY, left: start.left, bottom: start.bottom };
+    });
+
+    actor.addEventListener("pointermove", function (event) {
+
+      if (!dragging) {
+        return;
+      }
+
+      const bounds = monitor.getBoundingClientRect();
+      const left = Math.max(3, Math.min(97, dragging.left + (event.clientX - dragging.pointerX) / bounds.width * 100));
+      const bottom = Math.max(0, Math.min(45, dragging.bottom - (event.clientY - dragging.pointerY) / bounds.height * 100));
+      dragging.current = { left: left, bottom: bottom };
+      placeActor(actor, image, Object.assign({}, start, { left: left, bottom: bottom }));
+
+      // the projector follows along, a few times a second
+      if (Date.now() - lastSent > 70) {
+        lastSent = Date.now();
+        updatePerson(person.image, { x: left / 100, y: bottom / 100 }, false);
+      }
+    });
+
+    actor.addEventListener("pointerup", function (event) {
+
+      if (!dragging) {
+        return;
+      }
+
+      actor.releasePointerCapture(event.pointerId);
+      const moved = dragging.current;
+      dragging = null;
+
+      if (moved) {
+        updatePerson(person.image, { x: moved.left / 100, y: moved.bottom / 100 }, true);
+      }
+    });
+
+    actor.addEventListener("wheel", function (event) {
+      event.preventDefault();
+      const factor = event.deltaY < 0 ? 1.08 : 1 / 1.08;
+      const scale = Math.max(0.3, Math.min(2.2, start.scale * factor));
+      updatePerson(person.image, { scale: scale, x: start.left / 100, y: start.bottom / 100 }, true);
+    }, { passive: false });
+
+    actor.addEventListener("dblclick", function (event) {
+
+      if (event.target.closest("button")) {
+        return;
+      }
+
+      updatePerson(person.image, { x: undefined, y: undefined, scale: undefined, flip: undefined }, true);
     });
   }
 
@@ -1007,10 +1144,20 @@
     // One tight grid of picture tiles, each captioned with its scene, instead of a heading and box per scene.
     const grid = document.createElement("div");
     grid.className = "tile-grid";
+    // A picture used in several scenes of one file is listed once; its caption notes the other scenes.
+    const shownTiles = {};
     scenes.forEach(function (scene) {
       scene.items.forEach(function (item) {
         item.images.forEach(function (imageName, index) {
+
+          if (shownTiles[imageName]) {
+            const firstCaption = shownTiles[imageName].querySelector(".tile-caption");
+            firstCaption.title += " · also in: " + scene.heading;
+            return;
+          }
+
           const tile = document.createElement("div");
+          shownTiles[imageName] = tile;
           tile.className = "tile" + (item.dim ? " dim" : "");
           tile.appendChild(makeThumb(imageName, item.label));
           flatList.push({ image: imageName, label: item.label });
