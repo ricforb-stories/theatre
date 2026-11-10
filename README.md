@@ -277,6 +277,11 @@ optional tool that runs on your computer (no internet needed after the first dow
    left over): delete it from `cutouts/<campaign>/` and run again, or try the other model:
    `python make_cutouts.py "<Campaign>" --model isnet-anime "<Name>.png"`.
 
+Portraits painted on white or cream paper are cleaned up automatically: the white rim and the white brush strokes
+where a painting fades into the paper are removed, while white clothes and hair inside the figure stay. Cut-outs
+made before this clean-up existed can be fixed in seconds with `python make_cutouts.py --reclean` (the untouched
+originals are kept in `cutouts/_originals/`).
+
 People without a cut-out still work: they show their normal portrait instead, marked "no cut-out".
 
 ## Effects

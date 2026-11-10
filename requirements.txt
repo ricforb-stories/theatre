@@ -2,3 +2,5 @@
 # The app itself runs on plain Python with nothing to install.
 rembg[cpu]>=2.0.60
 pillow>=10.0
+numpy>=1.24
+scipy>=1.10
