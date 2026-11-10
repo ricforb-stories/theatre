@@ -72,7 +72,7 @@
   .monitor .actor.movable:active { cursor: grabbing; }
   .monitor .actor img { pointer-events: none; }
   .monitor .actor .who .remove { margin-left: 6px; padding: 0 5px; font-size: 0.7rem; line-height: 1.3; background: rgba(0,0,0,0.6); border-color: var(--live); }
-  .monitor .actor .who { position: absolute; bottom: 4%; display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
+  .monitor .actor .who { position: absolute; bottom: calc(4% + var(--sink, 0%)); display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
   .monitor .empty-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5e5048; font-family: Georgia, serif; font-size: 0.9rem; }
   .monitor-label { margin-top: 5px; color: var(--muted); font-size: 0.85rem; min-height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #take { width: 100%; margin-top: 8px; padding: 9px; font-weight: 600; border-color: var(--ready); background: #1d2a21; color: #d9f3e2; }
@@ -901,6 +901,8 @@
     actor.style.zIndex = String(100 - Math.round(place.bottom));
     image.style.maxWidth = (44 * place.scale) + "cqw";
     image.style.transform = place.flip ? "scaleX(-1)" : "";
+    // keep the name tag in view when the person is pushed below the edge
+    actor.style.setProperty("--sink", (Math.max(0, -place.bottom) / (88 * place.scale) * 100) + "%");
   }
 
   // Change one person on stage. commit: redraw the panel too (otherwise only the projector/state follow, for dragging).
@@ -964,7 +966,8 @@
 
       const bounds = monitor.getBoundingClientRect();
       const left = Math.max(3, Math.min(97, dragging.left + (event.clientX - dragging.pointerX) / bounds.width * 100));
-      const bottom = Math.max(0, Math.min(45, dragging.bottom - (event.clientY - dragging.pointerY) / bounds.height * 100));
+      // below 0 the person sinks past the bottom edge, as if standing close to the viewer
+      const bottom = Math.max(-60, Math.min(45, dragging.bottom - (event.clientY - dragging.pointerY) / bounds.height * 100));
       dragging.current = { left: left, bottom: bottom };
       placeActor(actor, image, Object.assign({}, start, { left: left, bottom: bottom }));
 

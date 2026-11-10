@@ -40,7 +40,7 @@
   .person.visible { opacity: 1; }
   .person img { max-height: 88vh; max-width: 46vw; object-fit: contain; filter: drop-shadow(0 0 1.6vh rgba(0, 0, 0, 0.75)); }
   .nameplate {
-    position: absolute; bottom: 4vh; padding: 0.6vh 2.4vh; border: 1px solid rgba(201, 162, 39, 0.7); border-radius: 0.6vh;
+    position: absolute; bottom: calc(4vh + var(--sink, 0vh)); padding: 0.6vh 2.4vh; border: 1px solid rgba(201, 162, 39, 0.7); border-radius: 0.6vh;
     background: rgba(20, 8, 8, 0.82); color: #f3e6d2; white-space: nowrap;
     font-family: "Palatino Linotype", Georgia, serif; font-size: 3.6vh; letter-spacing: 0.06em;
     opacity: 0; transition: opacity 0.5s ease;
@@ -253,6 +253,7 @@
       image.style.maxHeight = (88 * place.scale) + "vh";
       image.style.maxWidth = (46 * place.scale) + "vw";
       image.style.transform = place.flip ? "scaleX(-1)" : "";
+      element.style.setProperty("--sink", Math.max(0, -place.bottom) + "vh");
     });
 
     stage.classList.toggle("occupied", people.length > 0);

@@ -251,7 +251,7 @@ visited, and adds boxes for new pictures.
   know); *All* shows everyone, with filters for name, region, place and met. Click a pose to stand that person in
   front of the place (up to four); click again or ✕ to send them off. **Portrait** shows their full picture
   instead.
-- **Arrange people on the monitor:** drag a person to move them (sideways, or up to stand further back), turn
+- **Arrange people on the monitor:** drag a person to move them (sideways, up to stand further back, or down past the bottom edge to bring them close), turn
   the mouse wheel over them to make them bigger or smaller, click ⇋ in their name tag to turn them around, and
   double-click to put them back. The projector follows as you drag.
 - **Prepare mode** (top): your clicks build a green **Ready** view without touching the projector; press **Space**
