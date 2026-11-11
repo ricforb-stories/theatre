@@ -92,11 +92,12 @@ and every feature of the DM panel.
 4. [How your vault needs to look](#how-your-vault-needs-to-look)
 5. [Prepare your vault with Claude](#prepare-your-vault-with-claude)
 6. [Run a session](#run-a-session)
-7. [People in front of places (cut-outs)](#people-in-front-of-places-cut-outs)
-8. [Effects](#effects)
-9. [Sounds](#sounds)
-10. [Other laptops and a projector PC](#other-laptops-and-a-projector-pc)
-11. [Troubleshooting](#troubleshooting)
+7. [Saved scenes](#saved-scenes)
+8. [People in front of places (cut-outs)](#people-in-front-of-places-cut-outs)
+9. [Effects](#effects)
+10. [Sounds](#sounds)
+11. [Other laptops and a projector PC](#other-laptops-and-a-projector-pc)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -264,6 +265,21 @@ visited, and adds boxes for new pictures.
 **K** shake · **X** clear people · **/** search pictures · **P** filter people · **Space** reveal (prepare mode).
 The **Keys** button in the panel lists them too.
 
+## Saved scenes
+
+The **Scenes** tab (on the Places side, next to Adventure and Location) keeps set-ups you want to bring back with one click: "the tavern brawl", "the
+throne room at night".
+
+- Set up the place, the people (with their positions, sizes and flips), effects, Fill screen, names and the loops
+  you want, open the **Scenes** tab, type a name and click **Save scene** (or press Enter). Saving with a name that already exists replaces that scene.
+- To change a saved scene: click it, adjust anything, and click **Update scene** (the name box fills in when you
+  pick a scene, and its tile is highlighted). Change the name first to save a variation as a new scene instead.
+- Click a scene's tile to bring all of it back. In prepare mode it waits in the **Ready** view, and its loops start
+  when you press **Show it**.
+- **✕** on a tile deletes it (click twice: the first click asks).
+- Scenes are kept per campaign in `scenes.json` in the Theatre folder (private, never uploaded). A second laptop on
+  the Wi-Fi sees the same scenes.
+
 ## People in front of places (cut-outs)
 
 To stand NPCs in front of a place, Theatre needs a see-through copy of each portrait. These are made by an
@@ -366,4 +382,4 @@ use a strong password or keep it off.
 | `audio/` | The built-in sound recordings. |
 | `sounds/` | Your own sound files. |
 
-Your own files stay private and are never uploaded: `campaigns.json`, `remote.json`, `cutouts/`, your sound files.
+Your own files stay private and are never uploaded: `campaigns.json`, `remote.json`, `scenes.json`, `cutouts/`, your sound files.

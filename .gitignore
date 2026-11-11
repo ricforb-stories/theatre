@@ -2,6 +2,8 @@
 campaigns.json
 regions-*.json
 remote.json
+scenes.json
+scenes.json.tmp
 
 # Made from your portraits
 cutouts/

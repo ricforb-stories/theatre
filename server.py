@@ -591,6 +591,55 @@ def list_sounds():
     return sounds
 
 
+# ---------- saved scenes: place, people, effects and sounds, recalled with one click ----------
+
+SAVED_SCENES_FILE = os.path.join(APP_FOLDER, "scenes.json")
+_saved_scenes_lock = threading.Lock()
+
+
+def load_saved_scenes():
+    try:
+        with open(SAVED_SCENES_FILE, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+
+    return data if isinstance(data, dict) else {}
+
+
+def saved_scenes_for(campaign_name):
+    return load_saved_scenes().get(campaign_name, [])
+
+
+def change_saved_scenes(campaign_name, request):
+    """save (replaces a scene with the same name) or delete. Returns the campaign's scenes."""
+    with _saved_scenes_lock:
+        everything = load_saved_scenes()
+        scenes = everything.get(campaign_name, [])
+        name = str(request.get("name", "")).strip()[:80]
+
+        if request.get("action") == "save" and name and isinstance(request.get("scene"), dict):
+            entry = {"name": name, "scene": request["scene"], "saved": time.strftime("%Y-%m-%d %H:%M")}
+            existing = [index for index, scene in enumerate(scenes) if scene.get("name") == name]
+
+            if existing:
+                scenes[existing[0]] = entry
+            else:
+                scenes.append(entry)
+
+        elif request.get("action") == "delete":
+            scenes = [scene for scene in scenes if scene.get("name") != name]
+
+        everything[campaign_name] = scenes
+        temporary = SAVED_SCENES_FILE + ".tmp"
+
+        with open(temporary, "w", encoding="utf-8") as handle:
+            json.dump(everything, handle, indent=2, ensure_ascii=False)
+
+        os.replace(temporary, SAVED_SCENES_FILE)
+        return scenes
+
+
 def cutout_folder(campaign_name):
     if campaign_name not in campaigns():
         return None
@@ -970,6 +1019,19 @@ class ScreenHandler(SimpleHTTPRequestHandler):
             RELAY.publish(message)
             return self.send_json({"ok": True})
 
+        if parsed.path == "/api/saved-scenes":
+            try:
+                request = json.loads(self.read_body().decode("utf-8"))
+            except ValueError:
+                return self.send_text(400, "Bad request.", "text/plain; charset=utf-8")
+
+            campaign_name = str(request.get("campaign", ""))
+
+            if campaign_name not in campaigns():
+                return self.send_text(404, "No such campaign.", "text/plain; charset=utf-8")
+
+            return self.send_json(change_saved_scenes(campaign_name, request))
+
         if parsed.path == "/api/remote":
 
             # only the DM's own computer may change the password
@@ -1090,6 +1152,9 @@ class ScreenHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/people":
             return self.send_json(list_people(campaign_name))
+
+        if parsed.path == "/api/saved-scenes":
+            return self.send_json(saved_scenes_for(campaign_name))
 
         if parsed.path == "/api/sounds":
             return self.send_json(list_sounds())

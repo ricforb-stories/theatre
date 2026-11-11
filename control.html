@@ -112,6 +112,28 @@
   .share-panel .share-state { font-weight: 600; }
   .share-panel .share-state.on { color: var(--ready); }
   .share-panel .share-message { color: var(--ember); min-height: 1.2em; }
+  .scene-tools { display: flex; gap: 6px; flex: 1 1 260px; min-width: 0; }
+  .scene-tools[hidden] { display: none !important; }
+  .scene-tools .scene-name { flex: 1; min-width: 0; }
+  .saved-scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; align-items: start; }
+  .saved-scene-grid[hidden] { display: none !important; }
+  .saved-scene { position: relative; display: flex; flex-direction: column; width: 100%; padding: 0; overflow: hidden; border: 2px solid var(--line); border-radius: 4px; background: var(--panel); text-align: left; }
+  .saved-scene:hover { border-color: var(--brass); }
+  .saved-scene.current { border-color: var(--brass); box-shadow: 0 0 0 2px var(--brass); }
+  .mini-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #000; container-type: inline-size; }
+  .mini-stage .scene { position: absolute; inset: 0; }
+  .mini-stage .bg { position: absolute; inset: 0; display: flex; gap: 2%; align-items: center; justify-content: center; padding: 2%; }
+  .mini-stage .bg img { max-width: 100%; max-height: 100%; min-width: 0; flex: 1 1 0; object-fit: contain; }
+  .mini-stage.staged .bg { padding: 0; }
+  .mini-stage.staged .bg img { width: 100%; height: 100%; object-fit: cover; }
+  .mini-stage .actor { position: absolute; bottom: 0; height: 88%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .mini-stage .actor img { max-height: 100%; max-width: 44cqw; object-fit: contain; display: block; }
+  .mini-stage .tint { position: absolute; inset: 0; pointer-events: none; }
+  .saved-scene .scene-title { padding: 3px 6px 0; font-size: 0.85rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .saved-scene .scene-extras { padding: 0 6px 4px; font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+  .saved-scene .scene-delete { position: absolute; top: 4px; right: 4px; padding: 0 6px; font-size: 0.75rem; line-height: 1.3; border-radius: 3px; background: rgba(0, 0, 0, 0.7); border: 1px solid var(--line); color: var(--muted); }
+  .saved-scene .scene-delete.sure { color: #fff; background: var(--live); border-color: var(--live); }
+  .scenes-empty { color: var(--muted); font-size: 0.85rem; grid-column: 1 / -1; }
   .sound-bar { gap: 5px; }
   .sound-bar .sound-group { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 8px; }
   .sound-bar .sound-loop, .sound-bar .sound-shot { font-size: 0.85rem; padding: 4px 9px; }
@@ -198,14 +220,20 @@
       <div class="segmented" role="group" aria-label="Browse by">
         <button id="mode-file" aria-pressed="true">Adventure</button>
         <button id="mode-place" aria-pressed="false">Location</button>
+        <button id="mode-scenes" aria-pressed="false">Scenes</button>
       </div>
       <select id="file-select" aria-label="Adventure file"></select>
       <select id="place-select" aria-label="Location" hidden></select>
       <input id="search" type="search" placeholder="Search pictures (/)" aria-label="Search pictures">
+      <span class="scene-tools" id="scene-tools" hidden>
+        <input id="scene-name" class="scene-name" type="text" placeholder="Name what's set up now" aria-label="Scene name" maxlength="80">
+        <button id="scene-save" title="Save the place, people, effects and loops you have set up">Save scene</button>
+      </span>
     </div>
     <div class="pane-scroll">
       <div id="search-area"></div>
       <div id="scenes"><p class="empty">Pick an adventure file above.</p></div>
+      <div id="saved-scenes" class="saved-scene-grid" hidden></div>
     </div>
   </section>
 
@@ -382,6 +410,8 @@
   let projectorConnected = false;
   const soundTarget = document.getElementById("sound-target");
   let projectorPlaying = [];
+  // loops the DM switched on by hand (effect sounds come back with the effects themselves)
+  const handLoops = new Set();
 
   // Every sound call goes through here, to this laptop's speakers or the projector PC's.
   const soundOut = {
@@ -412,7 +442,52 @@
       });
     },
     toggleLoop: function (id) {
+
+      if (handLoops.has(id)) {
+        handLoops.delete(id);
+      } else {
+        handLoops.add(id);
+      }
+
       this.onProjector() ? this.send({ op: "toggle", id: id }) : sounds.toggleLoop(id);
+    },
+    // the loops really playing now (on this laptop or the projector PC), minus those the effects brought
+    currentHandLoops: function () {
+      const playing = this.onProjector() ? projectorPlaying.slice() : sounds.playingIds();
+      const fromEffects = new Set();
+
+      if (soundMatch.checked) {
+        (live.fx || []).forEach(function (kind) {
+          (EFFECT_SOUNDS[kind] || []).forEach(function (soundId) {
+            fromEffects.add(soundId);
+          });
+        });
+      }
+
+      return playing.filter(function (id) {
+        return !fromEffects.has(id);
+      });
+    },
+    // switch hand loops on and off until exactly these are playing
+    setHandLoops: function (ids) {
+      const wanted = new Set(ids || []);
+      const self = this;
+      handLoops.clear();
+      this.currentHandLoops().forEach(function (id) {
+        handLoops.add(id);
+      });
+      [...handLoops].forEach(function (id) {
+
+        if (!wanted.has(id)) {
+          self.toggleLoop(id);
+        }
+      });
+      wanted.forEach(function (id) {
+
+        if (!handLoops.has(id)) {
+          self.toggleLoop(id);
+        }
+      });
     },
     play: function (id) {
       this.onProjector() ? this.send({ op: "play", id: id }) : sounds.play(id);
@@ -428,6 +503,7 @@
       }
     },
     stopAll: function () {
+      handLoops.clear();
       sounds.stopAll();
       this.send({ op: "stop" });
     },
@@ -669,6 +745,11 @@
     live = JSON.parse(JSON.stringify(ready));
     send();
     render();
+
+    if (pendingSceneExtras) {
+      applySceneExtras(pendingSceneExtras);
+      pendingSceneExtras = null;
+    }
   }
 
   function blackScreen() {
@@ -1040,6 +1121,11 @@
     if (prepare) {
       drawMonitor(readyMonitor, ready, true);
       readyLabel.textContent = describe(ready);
+
+      // a recalled scene's loops wait for Show it; say so
+      if (pendingSceneExtras && (pendingSceneExtras.loops || []).length) {
+        readyLabel.textContent = describeSceneExtras({ loops: pendingSceneExtras.loops }) + " starts on Show it · " + readyLabel.textContent;
+      }
       takeButton.disabled = sameState(ready, live);
       takeButton.textContent = takeButton.disabled ? "Ready matches the projector" : "Show it (Space)";
     }
@@ -1329,12 +1415,21 @@
   function setMode(nextMode) {
     mode = nextMode;
     saveSettings({ mode: mode });
+    const onScenes = mode === "scenes";
     modeFileButton.setAttribute("aria-pressed", String(mode === "file"));
     modePlaceButton.setAttribute("aria-pressed", String(mode === "place"));
+    document.getElementById("mode-scenes").setAttribute("aria-pressed", String(onScenes));
     fileSelect.hidden = mode !== "file";
     placeSelect.hidden = mode !== "place";
+    searchInput.hidden = onScenes;
+    document.getElementById("scene-tools").hidden = !onScenes;
+    document.getElementById("saved-scenes").hidden = !onScenes;
+    scenesArea.hidden = onScenes;
+    searchArea.hidden = onScenes;
 
-    if (mode === "place") {
+    if (onScenes) {
+      loadSavedScenes();
+    } else if (mode === "place") {
       loadLocations();
     } else {
       loadFiles();
@@ -1770,7 +1865,9 @@
     campaignSelect.value = campaign;
     document.getElementById("title").textContent = campaign + " Screen";
     await loadCutouts();
-    setMode(loadSettings().mode === "place" ? "place" : "file");
+    loadSavedScenes();
+    const rememberedMode = loadSettings().mode;
+    setMode(rememberedMode === "place" || rememberedMode === "scenes" ? rememberedMode : "file");
   }
 
   // ---------- resizable split ----------
@@ -1833,6 +1930,7 @@
     document.getElementById("title").textContent = campaign + " Screen";
     people = [];
     loadCutouts();
+    loadSavedScenes();
     setMode(mode);
   });
 
@@ -1842,6 +1940,10 @@
 
   modePlaceButton.addEventListener("click", function () {
     setMode("place");
+  });
+
+  document.getElementById("mode-scenes").addEventListener("click", function () {
+    setMode("scenes");
   });
 
   searchInput.addEventListener("input", function () {
@@ -1999,7 +2101,306 @@
     render();
   }
 
+  // ---------- saved scenes ----------
+
+  const savedScenesArea = document.getElementById("saved-scenes");
+  const scenesSummary = document.getElementById("mode-scenes");
+  const sceneNameInput = document.getElementById("scene-name");
+  let savedScenes = [];
+  let pendingSceneExtras = null;
+  let currentSceneName = "";
+  const sceneSaveButton = document.getElementById("scene-save");
+
+  // "Update scene" when the name is one already saved, "Save scene" for a new one
+  function refreshSaveButton() {
+    const name = sceneNameInput.value.trim();
+    const exists = savedScenes.some(function (saved) {
+      return saved.name === name;
+    });
+    sceneSaveButton.textContent = exists ? "Update scene" : "Save scene";
+    sceneSaveButton.title = exists
+      ? "Save what's set up now over “" + name + "”"
+      : "Save the place, people, effects and loops you have set up";
+    document.querySelectorAll(".saved-scene").forEach(function (tile) {
+      tile.classList.toggle("current", tile.dataset.name === currentSceneName);
+    });
+  }
+
+  async function loadSavedScenes() {
+
+    if (!campaign) {
+      return;
+    }
+
+    try {
+      savedScenes = await fetch(withCampaign("/api/saved-scenes")).then(function (response) {
+        return response.json();
+      });
+    } catch (error) {
+      return;
+    }
+
+    renderSavedScenes();
+  }
+
+  async function changeSavedScenes(request) {
+    const response = await fetch("/api/saved-scenes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({ campaign: campaign }, request)),
+    });
+
+    if (!response.ok) {
+      const reason = response.status === 404
+        ? "the server is older than this page; close the Theatre server window and run start.bat again."
+        : (await response.text()).slice(0, 120);
+      statusLine.textContent = "Couldn't save the scene: " + reason;
+      statusLine.classList.remove("ok");
+      return;
+    }
+
+    savedScenes = await response.json();
+    renderSavedScenes();
+    // other panels (another laptop) refresh their list too
+    channel.post({ type: "scenes-changed", campaign: campaign });
+  }
+
+  function saveCurrentScene() {
+    const state = editing();
+    const name = sceneNameInput.value.trim() || state.label || "Scene " + (savedScenes.length + 1);
+    changeSavedScenes({
+      action: "save",
+      name: name,
+      scene: {
+        images: state.images,
+        label: state.label,
+        people: state.people || [],
+        fx: state.fx || [],
+        fxLevel: state.fxLevel || "medium",
+        fill: fillOn,
+        caption: captionOn,
+        loops: soundOut.currentHandLoops(),
+      },
+    });
+    currentSceneName = name;
+    sceneNameInput.value = name;
+  }
+
+  function applySceneExtras(extras) {
+
+    if (extras.fill !== fillOn) {
+      setFill(extras.fill);
+    }
+
+    if (extras.caption !== captionOn) {
+      setCaption(extras.caption);
+    }
+
+    soundOut.setHandLoops(extras.loops);
+  }
+
+  function recallScene(saved) {
+    const scene = saved.scene || {};
+    currentSceneName = saved.name;
+    sceneNameInput.value = saved.name;
+    refreshSaveButton();
+    const next = {
+      images: scene.images || [],
+      label: scene.label || saved.name,
+      campaign: campaign,
+      people: JSON.parse(JSON.stringify(scene.people || [])),
+      fx: scene.fx || [],
+      fxLevel: scene.fxLevel || "medium",
+    };
+    const extras = { fill: Boolean(scene.fill), caption: Boolean(scene.caption), loops: scene.loops || [] };
+
+    if (prepare) {
+      // everything waits in the Ready view; loops, fill and names follow on "Show it"
+      ready = next;
+      pendingSceneExtras = extras;
+      render();
+      return;
+    }
+
+    setEditing(next);
+    applySceneExtras(extras);
+  }
+
+  // what a mood does to the picture, roughly, for the small previews (no animation)
+  const MOOD_PREVIEWS = {
+    night: { filter: "brightness(0.55) saturate(0.55)", tint: "rgba(15, 30, 85, 0.35)" },
+    gray: { filter: "grayscale(0.9) brightness(0.85)", tint: "rgba(110, 115, 120, 0.12)" },
+    blood: { filter: "sepia(0.35) saturate(1.5) hue-rotate(-15deg) brightness(0.9)", tint: "rgba(150, 0, 15, 0.25)" },
+    dream: { filter: "saturate(1.25) brightness(1.08)", tint: "rgba(205, 175, 255, 0.18)" },
+    underwater: { filter: "saturate(0.45) brightness(0.85)", tint: "rgba(20, 110, 130, 0.38)" },
+    recording: { filter: "sepia(0.6) grayscale(0.35) contrast(1.15)", tint: "" },
+    darkness: { filter: "", tint: "radial-gradient(circle at 50% 55%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.85) 75%)" },
+  };
+
+  function drawMiniStage(scene) {
+    const stageBox = document.createElement("div");
+    const people = scene.people || [];
+    const effects = scene.fx || [];
+    stageBox.className = "mini-stage" + (scene.fill || people.length || effects.length ? " staged" : "");
+    const sceneBox = document.createElement("div");
+    sceneBox.className = "scene";
+    stageBox.appendChild(sceneBox);
+    const background = document.createElement("div");
+    background.className = "bg";
+    (scene.images || []).forEach(function (imageName) {
+      const image = document.createElement("img");
+      image.loading = "lazy";
+      image.src = imageUrl(imageName);
+      image.alt = "";
+      background.appendChild(image);
+    });
+    sceneBox.appendChild(background);
+    people.forEach(function (person, index) {
+      const actor = document.createElement("div");
+      actor.className = "actor";
+      const image = document.createElement("img");
+      image.loading = "lazy";
+      image.src = cutoutUrl(person.image);
+      image.alt = person.name;
+      actor.appendChild(image);
+      placeActor(actor, image, placement(person, index, people.length));
+      sceneBox.appendChild(actor);
+    });
+    const filters = [];
+    effects.forEach(function (kind) {
+      const look = MOOD_PREVIEWS[kind];
+
+      if (!look) {
+        return;
+      }
+
+      if (look.filter) {
+        filters.push(look.filter);
+      }
+
+      if (look.tint) {
+        const tint = document.createElement("div");
+        tint.className = "tint";
+        tint.style.background = look.tint;
+        stageBox.appendChild(tint);
+      }
+    });
+    sceneBox.style.filter = filters.join(" ");
+    return stageBox;
+  }
+
+  function describeSceneExtras(scene) {
+    const parts = [];
+    const effects = (scene.fx || []).map(function (kind) {
+      const entry = window.TableFx.KINDS.find(function (pair) {
+        return pair[0] === kind;
+      });
+      return entry ? entry[1] : kind;
+    });
+
+    if (effects.length) {
+      parts.push(effects.join(", ") + (scene.fxLevel && scene.fxLevel !== "medium" ? " (" + scene.fxLevel + ")" : ""));
+    }
+
+    if ((scene.loops || []).length) {
+      const names = {};
+      sounds.builtInLoops.concat(sounds.eberronLoops || [], sounds.sothmereLoops || []).forEach(function (pair) {
+        names[pair[0]] = pair[1];
+      });
+      sounds.files.forEach(function (file) {
+        names[file.id] = file.name;
+      });
+      parts.push("♪ " + scene.loops.map(function (id) {
+        return names[id] || id;
+      }).join(", "));
+    }
+
+    return parts.join(" · ");
+  }
+
+  function renderSavedScenes() {
+    savedScenesArea.innerHTML = "";
+    scenesSummary.textContent = savedScenes.length ? "Scenes (" + savedScenes.length + ")" : "Scenes";
+    // a picture tile per scene, like the place tiles
+
+    if (!savedScenes.length) {
+      const empty = document.createElement("span");
+      empty.className = "scenes-empty";
+      empty.className = "empty";
+      empty.textContent = "No saved scenes yet. Set up a place, people, effects and loops, name it above and click Save scene.";
+      savedScenesArea.appendChild(empty);
+      return;
+    }
+
+    savedScenes.forEach(function (saved) {
+      const scene = saved.scene || {};
+      const tile = document.createElement("button");
+      tile.className = "saved-scene";
+      tile.dataset.name = saved.name;
+      const extras = describeSceneExtras(scene);
+      tile.title = saved.name + (extras ? " · " + extras : "") + (saved.saved ? " (saved " + saved.saved + ")" : "") + " · click to bring it back";
+      tile.appendChild(drawMiniStage(scene));
+      const title = document.createElement("span");
+      title.className = "scene-title";
+      title.textContent = saved.name;
+      tile.appendChild(title);
+      const extrasLine = document.createElement("span");
+      extrasLine.className = "scene-extras";
+      extrasLine.textContent = extras || "No effects or loops";
+      tile.appendChild(extrasLine);
+      const remove = document.createElement("span");
+      remove.className = "scene-delete";
+      remove.textContent = "✕";
+      remove.title = "Delete this scene";
+      remove.setAttribute("role", "button");
+      tile.appendChild(remove);
+
+      tile.addEventListener("click", function (event) {
+
+        if (event.target === remove) {
+          event.stopPropagation();
+
+          // two clicks to delete: the first one asks
+          if (remove.classList.contains("sure")) {
+            changeSavedScenes({ action: "delete", name: saved.name });
+          } else {
+            remove.classList.add("sure");
+            remove.textContent = "Delete?";
+            setTimeout(function () {
+              remove.classList.remove("sure");
+              remove.textContent = "✕";
+            }, 3000);
+          }
+
+          return;
+        }
+
+        recallScene(saved);
+      });
+      savedScenesArea.appendChild(tile);
+    });
+    refreshSaveButton();
+  }
+
+  document.getElementById("scene-save").addEventListener("click", saveCurrentScene);
+
+
+
+  sceneNameInput.addEventListener("input", refreshSaveButton);
+
+  sceneNameInput.addEventListener("keydown", function (event) {
+
+    if (event.key === "Enter") {
+      saveCurrentScene();
+    }
+  });
+
   function handleMessage(message) {
+
+    if (message.type === "scenes-changed" && message.campaign === campaign) {
+      loadSavedScenes();
+    }
+
 
     if (message.type === "lightning") {
       projectorConnected = true;
@@ -2248,6 +2649,7 @@
   setInterval(loadSoundFiles, 20000);
   loadCampaigns();
   setInterval(loadCutouts, 20000);
+  setInterval(loadSavedScenes, 30000);
 })();
 </script>
 </body>
