@@ -301,14 +301,15 @@ in and out, stay on when you change pictures, follow prepare mode, and **B** cle
 
 ## Sounds
 
-The **Sounds** row. Built-in sounds are generated on the spot, no files needed:
+The **Sounds** row. Built-in sounds come with Theatre (recordings in the `audio` folder), no setup needed:
 
-- **Loops** (play until clicked again): Rain, Wind, Fire, Waves, Cave drips, Tavern crowd, Forest, plus Eberron's
-  Lightning rail, Airship, Sharn streets.
-- **Once:** Thunder, Sword, Explosion, Roar, Knock, Creak, Heartbeat, Bell, Whoosh, Magic, Rail horn, Steam hiss,
-  Arcane zap.
-- **Match effects:** effects bring their sound (Rain → rain, Embers → fire, Underwater → waves…) and each lightning
-  flash is followed by thunder.
+- **Loops** (play until clicked again): Rain light, Rain hard, Wind soft, Wind hard, Fire, Waves, Cave drips, Tavern
+  crowd, Tavern empty, Forest day, Forest night, plus Eberron's Lightning rail, Airship,
+  Sharn streets, Clock, Clock ominous, and Sothmere's Windmill.
+- **Once:** Thunder, Sword, Explosion, Underwater explosion, Roar, Knock, Heavy knock, Creak, Heartbeat, Bell,
+  Whoosh, Healing magic, Dark magic, Elemental magic, Rail horn, Steam hiss, Arcane zap.
+- **Match effects:** effects bring their sound (Rain → light rain, Storm → hard rain and wind, Snow and Ash → soft
+  wind, Embers → fire, Underwater → waves…) and each lightning flash is followed by thunder.
 - **Play on:** *this laptop* or *projector PC* (which speakers it comes out of).
 - Separate volumes for **Loops** and **Once**; **Stop sounds** fades everything out.
 
@@ -362,6 +363,7 @@ use a strong password or keep it off.
 | `make_cutouts.py`, `make-cutouts.bat` / `.command`, `requirements.txt` | The optional cut-out tool. |
 | `skills/theatre-setup/` | The Claude skill that prepares a vault. |
 | `CLAUDE.md` | Tells Claude about the project when it is opened in the Theatre folder. |
+| `audio/` | The built-in sound recordings. |
 | `sounds/` | Your own sound files. |
 
 Your own files stay private and are never uploaded: `campaigns.json`, `remote.json`, `cutouts/`, your sound files.

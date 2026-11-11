@@ -370,10 +370,10 @@
   const soundSummary = document.getElementById("sound-summary");
   // Which built-in loops each effect brings when "Match effects" is on.
   const EFFECT_SOUNDS = {
-    rain: ["rain"],
-    storm: ["rain", "wind"],
-    snow: ["wind"],
-    ash: ["wind"],
+    rain: ["rainLight"],
+    storm: ["rainHard", "windHard"],
+    snow: ["windSoft"],
+    ash: ["windSoft"],
     embers: ["fire"],
     underwater: ["waves"],
     rail: ["rail"],
@@ -401,7 +401,7 @@
       }
 
       const names = {};
-      sounds.builtInLoops.concat(sounds.eberronLoops).forEach(function (pair) {
+      sounds.builtInLoops.concat(sounds.eberronLoops, sounds.sothmereLoops).forEach(function (pair) {
         names[pair[0]] = pair[1];
       });
       sounds.files.forEach(function (file) {
@@ -592,6 +592,10 @@
     });
     sounds.eberronShots.forEach(function (pair) {
       addShot(pair[0], pair[1]);
+    });
+    addGroup("Sothmere");
+    sounds.sothmereLoops.forEach(function (pair) {
+      addLoop(pair[0], pair[1]);
     });
     let lastGroup = "";
     sounds.files.forEach(function (file) {

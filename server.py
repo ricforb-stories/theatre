@@ -864,7 +864,7 @@ class ScreenHandler(SimpleHTTPRequestHandler):
 
         decoded = urllib.parse.unquote(path)
 
-        if decoded.startswith("/sounds/"):
+        if decoded.startswith(("/sounds/", "/audio/")):
             return True
 
         if decoded.startswith(("/img/", "/cutout/")):
@@ -1139,8 +1139,8 @@ class ScreenHandler(SimpleHTTPRequestHandler):
             self.wfile.write(data)
             return
 
-        # plain files: only the app's own pages and scripts, and the sounds folder
-        if parsed.path in PUBLIC_FILES or urllib.parse.unquote(parsed.path).startswith("/sounds/"):
+        # plain files: only the app's own pages and scripts, its built-in audio, and the sounds folder
+        if parsed.path in PUBLIC_FILES or urllib.parse.unquote(parsed.path).startswith(("/sounds/", "/audio/")):
             return super().do_GET()
 
         self.send_error(404)
