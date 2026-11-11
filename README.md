@@ -243,15 +243,17 @@ visited, and adds boxes for new pictures.
 
 **The DM panel**
 
-- **Left: Places.** *Adventure* lists the files from `browse`; pick one and its pictures appear as tiles, grouped
+- **Left: three tabs, Places, People and Scenes.** The left side is where you pick things; the right side is the stage.
+- **Places.** *Adventure* lists the files from `browse`; pick one and its pictures appear as tiles, grouped
   by scene. *Location* lists places by region. Click a tile to show it; **Shift+click** puts a second picture beside
   it; **Both** shows a pair.
-- **Right: the monitor** shows exactly what's on the projector. Below it: **Effects**, **Sounds** and **People**.
-  Effects and Sounds fold away (click their title) to a one-line summary.
 - **People.** *In scene* shows the people of the open file and of the place on screen (with the names the players
-  know); *All* shows everyone, with filters for name, region, place and met. Click a pose to stand that person in
-  front of the place (up to four); click again or ✕ to send them off. **Portrait** shows their full picture
-  instead.
+  know); *All* shows everyone, with filters for name, region, place and met. Each person is one big card; click it
+  to stand that person in front of the place (up to four), and click again or ✕ to send them off. Extra poses sit
+  as small pictures under the card. **Portrait** (top left of the card when you point at it) shows their full
+  picture instead. **S / M / L** sets the card size.
+- **Right: the monitor** shows exactly what's on the projector. Below it: **Effects** and **Sounds**, open. Click
+  their title to fold one to a one-line summary.
 - **Arrange people on the monitor:** drag a person to move them (sideways, up to stand further back, or down past the bottom edge to bring them close), turn
   the mouse wheel over them to make them bigger or smaller, click ⇋ in their name tag to turn them around, and
   double-click to put them back. The projector follows as you drag.
@@ -262,16 +264,18 @@ visited, and adds boxes for new pictures.
 - Drag the line between the two halves to resize them; the panel remembers.
 
 **Keys:** → / ← next or previous picture in the file · **B** black screen · **C** names · **F** fill screen ·
-**K** shake · **X** clear people · **/** search pictures · **P** filter people · **Space** reveal (prepare mode).
+**K** shake · **X** clear people · **/** search pictures · **P** find a person · **Space** reveal (prepare mode).
 The **Keys** button in the panel lists them too.
 
 ## Saved scenes
 
-The **Scenes** tab (on the Places side, next to Adventure and Location) keeps set-ups you want to bring back with one click: "the tavern brawl", "the
+The **Scenes** tab (on the left, next to Places and People) keeps set-ups you want to bring back with one click: "the tavern brawl", "the
 throne room at night".
 
 - Set up the place, the people (with their positions, sizes and flips), effects, Fill screen, names and the loops
   you want, open the **Scenes** tab, type a name and click **Save scene** (or press Enter). Saving with a name that already exists replaces that scene.
+- Quicker: **Save scene…** under the monitor (below Show it) opens a small box with the name filled in; Enter saves
+  (it says **Update** when that name already exists), Escape cancels.
 - To change a saved scene: click it, adjust anything, and click **Update scene** (the name box fills in when you
   pick a scene, and its tile is highlighted). Change the name first to save a variation as a new scene instead.
 - Click a scene's tile to bring all of it back. In prepare mode it waits in the **Ready** view, and its loops start
@@ -305,7 +309,7 @@ People without a cut-out still work: they show their normal portrait instead, ma
 
 ## Effects
 
-The **Effects** row: mix as many as you like, pick **Light / Medium / Heavy**, **None** turns them off. They fade
+The **Effects** row: mix as many as you like, pick **Light / Medium / Heavy**, **Clear effects** turns them all off (it stays reachable when Effects is folded). They fade
 in and out, stay on when you change pictures, follow prepare mode, and **B** clears them.
 
 - **Weather:** Rain, Storm (rain with lightning), Snow, Mist, Ash, Leaves.

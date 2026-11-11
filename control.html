@@ -42,7 +42,7 @@
   .pane-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
   .divider { cursor: col-resize; background: var(--line); border-left: 3px solid var(--bg); border-right: 3px solid var(--bg); }
   .divider:hover, .divider.dragging { background: var(--brass); }
-  .right { min-height: 0; display: flex; flex-direction: column; }
+  .right { min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 
   .segmented { display: flex; }
   .segmented button { border-radius: 0; }
@@ -58,7 +58,7 @@
   .monitor-head h2 { margin: 0; }
   .monitor-box.live h2 { color: var(--live); }
   .monitor-box.ready h2 { color: var(--ready); }
-  .monitor { position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: calc(40vh * 16 / 9); background: #000; border-radius: 4px; overflow: hidden; border: 2px solid var(--line); }
+  .monitor { position: relative; aspect-ratio: 16 / 9; width: 100%; max-width: calc(52vh * 16 / 9); background: #000; border-radius: 4px; overflow: hidden; border: 2px solid var(--line); }
   .monitor-box.live .monitor { border-color: var(--live); }
   .monitor-box.ready .monitor { border-color: var(--ready); }
   .monitor .bg { position: absolute; inset: 0; display: flex; gap: 2%; align-items: center; justify-content: center; padding: 2%; }
@@ -75,6 +75,13 @@
   .monitor .actor .who { position: absolute; bottom: calc(4% + var(--sink, 0%)); display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
   .monitor .empty-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5e5048; font-family: Georgia, serif; font-size: 0.9rem; }
   .monitor-label { margin-top: 5px; color: var(--muted); font-size: 0.85rem; min-height: 1.3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quick-save { width: 100%; margin-top: 6px; padding: 6px; font-size: 0.85rem; color: var(--muted); }
+  .quick-save-box { margin-top: 6px; padding: 8px; border: 1px solid var(--brass); border-radius: 6px; background: var(--panel-2); display: flex; flex-direction: column; gap: 6px; }
+  .quick-save-box[hidden] { display: none !important; }
+  .quick-save-box input { width: 100%; }
+  .quick-save-actions { display: flex; gap: 6px; }
+  .quick-save-actions button { flex: 1; }
+  .quick-save-ok { border-color: var(--brass); font-weight: 600; }
   #take { width: 100%; margin-top: 8px; padding: 9px; font-weight: 600; border-color: var(--ready); background: #1d2a21; color: #d9f3e2; }
   #take:disabled { opacity: 0.45; cursor: default; }
 
@@ -87,6 +94,7 @@
   .fx-bar .spacer { flex: 1; }
   .fx-bar .fx-group { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 2px 0 8px; }
   #fx-shake { border-color: var(--ember); }
+  .fx-bar .fx-clear { font-size: 0.85rem; padding: 4px 9px; }
   .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
   .tile { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .tile.dim { opacity: 0.55; }
@@ -163,18 +171,34 @@
   .empty { color: var(--muted); font-family: Georgia, serif; }
   .note { color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; }
 
-  .person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 8px; }
-  .person-card { min-width: 0; padding: 6px; gap: 4px; }
-  .person-card .item-label { display: flex; flex-direction: column; gap: 1px; color: var(--ink); font-size: 0.9rem; max-width: none; }
-  .person-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .person-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .person-top .portrait { flex: none; font-size: 0.68rem; padding: 0 6px; line-height: 1.5; color: var(--muted); }
-  .person-card .where { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .person-card .unmet-tag { font-size: 0.7rem; color: var(--live); }
-  .poses { display: flex; gap: 5px; }
-  .pose { position: relative; flex: 1 1 0; min-width: 0; height: 100px; padding: 2px; background: #000; border: 2px solid var(--line); border-radius: 4px; }
+  /* place groups sit side by side, so a place with one person doesn't take a whole row */
+  #people-grid { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 6px 18px; }
+  #people-grid > .scene { margin-bottom: 4px; max-width: 100%; }
+  #people-grid > .scene h3 { width: 0; min-width: 100%; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .person-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .person-card { position: relative; flex: none; width: var(--person-size, 170px); padding: 0; gap: 0; overflow: hidden; }
+  .person-stage { position: relative; }
+  .pose { position: relative; min-width: 0; padding: 2px; background: #000; border: 2px solid var(--line); border-radius: 4px; }
   .pose img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .pose.no-cut img { object-fit: cover; }
+  .pose.main { display: block; width: 100%; aspect-ratio: 4 / 5; border-radius: 6px 6px 0 0; background: radial-gradient(ellipse at 50% 35%, #2a1717 0%, #000 75%); }
+  .pose.main:hover { border-color: var(--brass); }
+  .person-caption { position: absolute; left: 2px; right: 2px; bottom: 2px; padding: 14px 8px 5px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.88) 45%); pointer-events: none; display: flex; flex-direction: column; border-radius: 0 0 4px 4px; }
+  .person-name { color: var(--ink); font-size: 0.95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person-card .where { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .person-card .unmet-tag { color: var(--live); }
+  .person-stage .portrait { position: absolute; top: 6px; left: 6px; font-size: 0.68rem; padding: 0 6px; line-height: 1.6; color: var(--ink); background: rgba(0, 0, 0, 0.7); opacity: 0; transition: opacity 0.12s; }
+  .person-card:hover .portrait, .person-stage .portrait:focus-visible { opacity: 1; }
+  .alt-poses { display: flex; gap: 4px; padding: 4px; background: var(--panel); }
+  .alt-poses .pose { flex: 0 0 auto; width: 44px; height: 54px; padding: 1px; }
+  .alt-poses .pose .cut-mark { display: none; }
+  .people-size button { font-size: 0.8rem; padding: 4px 8px; }
+  .pane-tabs { flex: none; display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
+  .pane-tab { border-radius: 6px 6px 0 0; border-bottom: none; padding: 6px 16px; margin-bottom: -1px; font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: none; }
+  .pane-tab[aria-selected="true"] { color: var(--brass); background: var(--bg); border-color: var(--line); border-bottom: 1px solid var(--bg); font-weight: 600; }
+  .pane-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .pane-view[hidden] { display: none !important; }
+  .stage-spacer { flex: 1; }
   .count { color: var(--muted); font-size: 0.8rem; }
 
   @media (max-width: 900px) {
@@ -206,7 +230,7 @@
       <b>Prepare mode:</b> clicks build the <b>Ready</b> view; <kbd>Space</kbd> or <b>Show it</b> puts it on the projector.<br>
       <kbd>→</kbd> / <kbd>←</kbd> next / previous picture in the file · <kbd>X</kbd> clear people<br>
       <b>Share</b> (top right): a link and password so a laptop on the same Wi-Fi can run this panel too.<br>
-      <kbd>/</kbd> search places · <kbd>P</kbd> filter people · <kbd>B</kbd> black screen (always at once, clears effects too) · <kbd>C</kbd> names · <kbd>F</kbd> fill screen (crop pictures to the whole projector; people and effects always fill)<br>
+      <kbd>/</kbd> search places · <kbd>P</kbd> find a person · <kbd>B</kbd> black screen (always at once, clears effects too) · <kbd>C</kbd> names · <kbd>F</kbd> fill screen (crop pictures to the whole projector; people and effects always fill)<br>
       <b>Sounds</b> play from this window: loops run until clicked again, the others play once. Your own files go in the <b>sounds</b> folder.<br>
       <b>Effects</b> can be mixed (one mood at a time) and stay on when you change pictures. <kbd>K</kbd> shakes the projector once, straight away.
     </div>
@@ -214,26 +238,63 @@
 </header>
 
 <div class="split" id="split">
-  <section class="pane" aria-label="Places">
-    <div class="pane-bar">
-      <h2>Places</h2>
-      <div class="segmented" role="group" aria-label="Browse by">
-        <button id="mode-file" aria-pressed="true">Adventure</button>
-        <button id="mode-place" aria-pressed="false">Location</button>
-        <button id="mode-scenes" aria-pressed="false">Scenes</button>
-      </div>
-      <select id="file-select" aria-label="Adventure file"></select>
-      <select id="place-select" aria-label="Location" hidden></select>
-      <input id="search" type="search" placeholder="Search pictures (/)" aria-label="Search pictures">
-      <span class="scene-tools" id="scene-tools" hidden>
-        <input id="scene-name" class="scene-name" type="text" placeholder="Name what's set up now" aria-label="Scene name" maxlength="80">
-        <button id="scene-save" title="Save the place, people, effects and loops you have set up">Save scene</button>
-      </span>
+  <section class="pane" aria-label="Pictures, people and scenes">
+    <div class="pane-tabs" role="tablist">
+      <button id="tab-places" class="pane-tab" role="tab" aria-selected="true">Places</button>
+      <button id="tab-people" class="pane-tab" role="tab" aria-selected="false" title="People (P)">People</button>
+      <button id="tab-scenes" class="pane-tab" role="tab" aria-selected="false">Scenes</button>
     </div>
-    <div class="pane-scroll">
-      <div id="search-area"></div>
-      <div id="scenes"><p class="empty">Pick an adventure file above.</p></div>
-      <div id="saved-scenes" class="saved-scene-grid" hidden></div>
+
+    <div class="pane-view" id="places-view">
+      <div class="pane-bar">
+        <div class="segmented" role="group" aria-label="Browse by">
+          <button id="mode-file" aria-pressed="true">Adventure</button>
+          <button id="mode-place" aria-pressed="false">Location</button>
+        </div>
+        <select id="file-select" aria-label="Adventure file"></select>
+        <select id="place-select" aria-label="Location" hidden></select>
+        <input id="search" type="search" placeholder="Search pictures (/)" aria-label="Search pictures">
+      </div>
+      <div class="pane-scroll">
+        <div id="search-area"></div>
+        <div id="scenes"><p class="empty">Pick an adventure file above.</p></div>
+      </div>
+    </div>
+
+    <div class="pane-view" id="people-view" hidden>
+      <div class="pane-bar people-bar">
+        <div class="segmented" role="group" aria-label="Which people">
+          <button id="scope-scene" aria-pressed="true" title="People at the place on screen and in the open file">In scene</button>
+          <button id="scope-all" aria-pressed="false">All</button>
+        </div>
+        <input id="people-filter" type="search" placeholder="Name or place (P)" aria-label="Filter people by name or place">
+        <select id="people-region" aria-label="Region"></select>
+        <select id="people-place" aria-label="Place"></select>
+        <select id="people-met" aria-label="Met or not">
+          <option value="all">Met + not met</option>
+          <option value="met">Met only</option>
+          <option value="unmet">Not met yet</option>
+        </select>
+        <div class="segmented people-size" role="group" aria-label="Card size">
+          <button data-size="small" aria-pressed="false" title="Small cards">S</button>
+          <button data-size="medium" aria-pressed="true" title="Medium cards">M</button>
+          <button data-size="large" aria-pressed="false" title="Large cards">L</button>
+        </div>
+        <span class="count" id="people-count"></span>
+      </div>
+      <div class="pane-scroll" id="people-grid"><p class="empty">Loading people…</p></div>
+    </div>
+
+    <div class="pane-view" id="scenes-view" hidden>
+      <div class="pane-bar">
+        <span class="scene-tools" id="scene-tools">
+          <input id="scene-name" class="scene-name" type="text" placeholder="Name what's set up now" aria-label="Scene name" maxlength="80">
+          <button id="scene-save" title="Save the place, people, effects and loops you have set up">Save scene</button>
+        </span>
+      </div>
+      <div class="pane-scroll">
+        <div id="saved-scenes" class="saved-scene-grid"></div>
+      </div>
     </div>
   </section>
 
@@ -251,6 +312,14 @@
         <div class="monitor" id="live-monitor"></div>
         <div class="monitor-label" id="live-label">Black screen</div>
         <button id="take" hidden>Show it (Space)</button>
+        <button id="quick-save" class="quick-save" title="Save what's set up as a scene">Save scene…</button>
+        <div class="quick-save-box" id="quick-save-box" hidden>
+          <input id="quick-save-name" type="text" maxlength="80" aria-label="Scene name" placeholder="Scene name">
+          <div class="quick-save-actions">
+            <button id="quick-save-ok" class="quick-save-ok">Save</button>
+            <button id="quick-save-cancel">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="pane-bar fx-bar collapsible" id="fx-bar">
@@ -264,7 +333,7 @@
         <button data-level="heavy" aria-pressed="false">Heavy</button>
       </div>
       <button id="fx-shake" class="fx-kind" title="A one-off jolt on the projector (K)">Shake (K)</button>
-      <button id="fx-clear" class="fx-kind">None</button>
+      <button id="fx-clear" class="fx-clear keep" title="Turn every effect off">Clear effects</button>
     </div>
     <div class="pane-bar sound-bar collapsible" id="sound-bar">
       <button class="section-toggle keep" aria-expanded="true" aria-controls="sound-bar"><span class="caret">▾</span>Sounds</button>
@@ -284,23 +353,6 @@
       <label title="Volume of one-shot sounds (thunder, swords, doors)">Once <input type="range" id="sound-shot-volume" min="0" max="1" step="0.05" value="0.8"></label>
       <button id="sound-stop" class="sound-shot keep">Stop sounds</button>
     </div>
-    <div class="pane-bar">
-      <h2>People</h2>
-      <div class="segmented" role="group" aria-label="Which people">
-        <button id="scope-scene" aria-pressed="true" title="People at the place on screen and in the open file">In scene</button>
-        <button id="scope-all" aria-pressed="false">All</button>
-      </div>
-      <input id="people-filter" type="search" placeholder="Name or place (P)" aria-label="Filter people by name or place">
-      <select id="people-region" aria-label="Region"></select>
-      <select id="people-place" aria-label="Place"></select>
-      <select id="people-met" aria-label="Met or not">
-        <option value="all">Met + not met</option>
-        <option value="met">Met only</option>
-        <option value="unmet">Not met yet</option>
-      </select>
-      <span class="count" id="people-count"></span>
-    </div>
-    <div class="pane-scroll" id="people-grid"><p class="empty">Loading people…</p></div>
   </section>
 </div>
 
@@ -1120,12 +1172,12 @@
 
     if (prepare) {
       drawMonitor(readyMonitor, ready, true);
-      readyLabel.textContent = describe(ready);
-
-      // a recalled scene's loops wait for Show it; say so
-      if (pendingSceneExtras && (pendingSceneExtras.loops || []).length) {
-        readyLabel.textContent = describeSceneExtras({ loops: pendingSceneExtras.loops }) + " starts on Show it · " + readyLabel.textContent;
-      }
+      // the caption only appears when a recalled scene's loops are waiting for Show it
+      const waitingLoops = pendingSceneExtras && (pendingSceneExtras.loops || []).length;
+      readyLabel.hidden = !waitingLoops;
+      readyLabel.textContent = waitingLoops
+        ? describeSceneExtras({ loops: pendingSceneExtras.loops }) + " starts on Show it"
+        : "";
       takeButton.disabled = sameState(ready, live);
       takeButton.textContent = takeButton.disabled ? "Ready matches the projector" : "Show it (Space)";
     }
@@ -1415,25 +1467,45 @@
   function setMode(nextMode) {
     mode = nextMode;
     saveSettings({ mode: mode });
-    const onScenes = mode === "scenes";
     modeFileButton.setAttribute("aria-pressed", String(mode === "file"));
     modePlaceButton.setAttribute("aria-pressed", String(mode === "place"));
-    document.getElementById("mode-scenes").setAttribute("aria-pressed", String(onScenes));
     fileSelect.hidden = mode !== "file";
     placeSelect.hidden = mode !== "place";
-    searchInput.hidden = onScenes;
-    document.getElementById("scene-tools").hidden = !onScenes;
-    document.getElementById("saved-scenes").hidden = !onScenes;
-    scenesArea.hidden = onScenes;
-    searchArea.hidden = onScenes;
 
-    if (onScenes) {
-      loadSavedScenes();
-    } else if (mode === "place") {
+    if (mode === "place") {
       loadLocations();
     } else {
       loadFiles();
     }
+  }
+
+  // the left side's three tabs: Places, People, Scenes
+  const TABS = ["places", "people", "scenes"];
+  let tab = "places";
+
+  function setTab(nextTab) {
+    tab = TABS.includes(nextTab) ? nextTab : "places";
+    saveSettings({ tab: tab });
+    TABS.forEach(function (name) {
+      document.getElementById("tab-" + name).setAttribute("aria-selected", String(name === tab));
+      document.getElementById(name + "-view").hidden = name !== tab;
+    });
+
+    if (tab === "scenes") {
+      loadSavedScenes();
+    }
+  }
+
+  // person card size: small, medium or large
+  const PERSON_SIZES = { small: "125px", medium: "170px", large: "240px" };
+
+  function setPersonSize(size) {
+    const chosen = PERSON_SIZES[size] ? size : "medium";
+    saveSettings({ personSize: chosen });
+    peopleGrid.style.setProperty("--person-size", PERSON_SIZES[chosen]);
+    document.querySelectorAll(".people-size button").forEach(function (button) {
+      button.setAttribute("aria-pressed", String(button.dataset.size === chosen));
+    });
   }
 
   async function runSearch() {
@@ -1708,6 +1780,7 @@
       section.className = "scene";
       const heading = document.createElement("h3");
       heading.textContent = group.place + (group.region && group.region !== group.place ? " · " + group.region : "");
+      heading.title = heading.textContent;
       section.appendChild(heading);
       const items = document.createElement("div");
       items.className = "items person-grid";
@@ -1736,15 +1809,11 @@
   function makePersonCard(person) {
     const card = document.createElement("div");
     card.className = "item person-card" + (person.met ? "" : " dim");
-    const label = document.createElement("div");
-    label.className = "item-label";
-    const top = document.createElement("div");
-    top.className = "person-top";
+    const stage = document.createElement("div");
+    stage.className = "person-stage";
     const name = document.createElement("span");
     name.className = "person-name";
     name.textContent = person.name;
-    name.title = person.name;
-    top.appendChild(name);
     const portrait = document.createElement("button");
     portrait.className = "portrait";
     portrait.textContent = "Portrait";
@@ -1755,8 +1824,6 @@
       });
       showPicture(images.slice(0, 2), person.name, false);
     });
-    top.appendChild(portrait);
-    label.appendChild(top);
     const details = document.createElement("span");
     details.className = "where";
     const detailParts = [];
@@ -1777,14 +1844,17 @@
     }
 
     details.appendChild(document.createTextNode(detailParts.join(" · ")));
-    details.title = (person.met ? "" : "not met yet · ") + detailParts.join(" · ");
-    label.appendChild(details);
-    card.appendChild(label);
-    const poses = document.createElement("div");
-    poses.className = "poses";
-    person.poses.forEach(function (pose) {
+    card.title = person.name + (person.met ? "" : " · not met yet") + (detailParts.length ? " · " + detailParts.join(" · ") : "");
+    const caption = document.createElement("div");
+    caption.className = "person-caption";
+    caption.appendChild(name);
+    caption.appendChild(details);
+    // the first pose is the big picture; any others sit as small pictures underneath
+    const altPoses = document.createElement("div");
+    altPoses.className = "alt-poses";
+    person.poses.forEach(function (pose, index) {
       const button = document.createElement("button");
-      button.className = "pose" + (pose.cutout ? "" : " no-cut");
+      button.className = "pose " + (index === 0 ? "main" : "alt") + (pose.cutout ? "" : " no-cut");
       button.dataset.image = pose.image;
       button.title = pose.cutout ? "Stand " + person.name + " in front of the place" : "No cut-out yet: shows the portrait";
       const image = document.createElement("img");
@@ -1808,9 +1878,21 @@
           showPicture([pose.image], person.name, false);
         }
       });
-      poses.appendChild(button);
+
+      if (index === 0) {
+        stage.appendChild(button);
+      } else {
+        altPoses.appendChild(button);
+      }
     });
-    card.appendChild(poses);
+    stage.appendChild(caption);
+    stage.appendChild(portrait);
+    card.appendChild(stage);
+
+    if (person.poses.length > 1) {
+      card.appendChild(altPoses);
+    }
+
     return card;
   }
 
@@ -1866,8 +1948,11 @@
     document.getElementById("title").textContent = campaign + " Screen";
     await loadCutouts();
     loadSavedScenes();
-    const rememberedMode = loadSettings().mode;
-    setMode(rememberedMode === "place" || rememberedMode === "scenes" ? rememberedMode : "file");
+    const rememberedSettings = loadSettings();
+    // older versions kept "scenes" as a Places mode
+    setTab(rememberedSettings.tab || (rememberedSettings.mode === "scenes" ? "scenes" : "places"));
+    setPersonSize(rememberedSettings.personSize);
+    setMode(rememberedSettings.mode === "place" ? "place" : "file");
   }
 
   // ---------- resizable split ----------
@@ -1942,8 +2027,16 @@
     setMode("place");
   });
 
-  document.getElementById("mode-scenes").addEventListener("click", function () {
-    setMode("scenes");
+  TABS.forEach(function (name) {
+    document.getElementById("tab-" + name).addEventListener("click", function () {
+      setTab(name);
+    });
+  });
+
+  document.querySelectorAll(".people-size button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      setPersonSize(button.dataset.size);
+    });
   });
 
   searchInput.addEventListener("input", function () {
@@ -2038,21 +2131,16 @@
     saveSettings({ soundShotVolume: Number(soundShotVolume.value) });
   });
 
-  // Collapsible sections: remembered, with a one-line status while closed.
+  // Collapsible sections (Effects, Sounds): open whenever the panel opens; folding leaves a one-line status.
   document.querySelectorAll(".collapsible").forEach(function (section) {
     const toggle = section.querySelector(".section-toggle");
-    const settingKey = "collapsed:" + section.id;
     const apply = function (collapsed) {
       section.classList.toggle("collapsed", collapsed);
       toggle.setAttribute("aria-expanded", String(!collapsed));
     };
-    apply(Boolean(loadSettings()[settingKey]));
+    apply(false);
     toggle.addEventListener("click", function () {
-      const collapsed = !section.classList.contains("collapsed");
-      apply(collapsed);
-      const setting = {};
-      setting[settingKey] = collapsed;
-      saveSettings(setting);
+      apply(!section.classList.contains("collapsed"));
     });
   });
 
@@ -2104,7 +2192,7 @@
   // ---------- saved scenes ----------
 
   const savedScenesArea = document.getElementById("saved-scenes");
-  const scenesSummary = document.getElementById("mode-scenes");
+  const scenesSummary = document.getElementById("tab-scenes");
   const sceneNameInput = document.getElementById("scene-name");
   let savedScenes = [];
   let pendingSceneExtras = null;
@@ -2166,8 +2254,12 @@
   }
 
   function saveCurrentScene() {
+    saveSceneAs(sceneNameInput.value.trim());
+  }
+
+  function saveSceneAs(typedName) {
     const state = editing();
-    const name = sceneNameInput.value.trim() || state.label || "Scene " + (savedScenes.length + 1);
+    const name = typedName || state.label || "Scene " + (savedScenes.length + 1);
     changeSavedScenes({
       action: "save",
       name: name,
@@ -2184,6 +2276,8 @@
     });
     currentSceneName = name;
     sceneNameInput.value = name;
+    statusLine.textContent = "Saved scene \u201c" + name + "\u201d";
+    statusLine.classList.add("ok");
   }
 
   function applySceneExtras(extras) {
@@ -2384,6 +2478,56 @@
 
   document.getElementById("scene-save").addEventListener("click", saveCurrentScene);
 
+  const quickSaveBox = document.getElementById("quick-save-box");
+  const quickSaveName = document.getElementById("quick-save-name");
+  const quickSaveOk = document.getElementById("quick-save-ok");
+
+  function refreshQuickSaveButton() {
+    const exists = savedScenes.some(function (saved) {
+      return saved.name === quickSaveName.value.trim();
+    });
+    quickSaveOk.textContent = exists ? "Update" : "Save";
+  }
+
+  function openQuickSave() {
+    quickSaveName.value = currentSceneName || editing().label || "";
+    quickSaveBox.hidden = false;
+    refreshQuickSaveButton();
+    quickSaveName.focus();
+    quickSaveName.select();
+  }
+
+  function closeQuickSave() {
+    quickSaveBox.hidden = true;
+  }
+
+  function confirmQuickSave() {
+    saveSceneAs(quickSaveName.value.trim());
+    closeQuickSave();
+  }
+
+  document.getElementById("quick-save").addEventListener("click", function () {
+
+    if (quickSaveBox.hidden) {
+      openQuickSave();
+    } else {
+      closeQuickSave();
+    }
+  });
+  quickSaveOk.addEventListener("click", confirmQuickSave);
+  document.getElementById("quick-save-cancel").addEventListener("click", closeQuickSave);
+  quickSaveName.addEventListener("input", refreshQuickSaveButton);
+  quickSaveName.addEventListener("keydown", function (event) {
+
+    if (event.key === "Enter") {
+      confirmQuickSave();
+    }
+
+    if (event.key === "Escape") {
+      closeQuickSave();
+    }
+  });
+
 
 
   sceneNameInput.addEventListener("input", refreshSaveButton);
@@ -2475,11 +2619,13 @@
 
     if (event.key === "/") {
       event.preventDefault();
+      setTab("places");
       searchInput.focus();
     }
 
     if (event.key === "p" || event.key === "P") {
       event.preventDefault();
+      setTab("people");
       peopleFilter.focus();
       peopleFilter.select();
     }
