@@ -1,12 +1,13 @@
 ---
 name: theatre-setup
-description: Prepare an Obsidian tabletop campaign vault for Theatre, the projector table screen (pictures, NPCs standing in scenes, places by region). Use when the user wants to set up, convert or "redo" an adventure or campaign for Theatre or the table screen, add "Show the players" boxes, fill in NPC or place properties for it, write campaigns.json, make NPC cut-outs, or keep the vault up to date for Theatre after a session.
+description: Prepare an Obsidian tabletop campaign vault for Theatre, the projector table screen (pictures, NPCs standing in scenes, items revealed over the scene, places by region). Use when the user wants to set up, convert or "redo" an adventure or campaign for Theatre or the table screen, add "Show the players" boxes, fill in NPC, item or place properties for it, write campaigns.json, make NPC cut-outs, or keep the vault up to date for Theatre after a session.
 ---
 
 # Preparing a campaign vault for Theatre
 
 Theatre is a small local app (a Python server plus two web pages) that shows campaign pictures on a projector:
-places, NPCs standing in front of them like a visual novel, weather and sound. It only **reads** the vault.
+places, NPCs standing in front of them like a visual novel, items revealed over the scene with a glow, weather and
+sound. It only **reads** the vault.
 Your job is to make the vault follow the few conventions below, so Theatre finds everything.
 
 The user's notes are their work. **Only add** boxes and properties. Never delete, reword, move or reformat their
@@ -34,10 +35,18 @@ A person:
 > ![[Old Marga.png|300]] ![[Old Marga 2.png|300]]
 ```
 
-- `[!example]` = place, `[!tip]` = person. Theatre shows places on the left and people on the right.
-- The text after `Show the players:` is the label the DM sees and, for people, the **name plate on the projector**.
-  For people the players don't know by name yet, use the name they know (`[[Note|The Fishwife]]`).
-  Never put a secret name there.
+An item (a sword, an amulet, a letter the players find):
+
+```markdown
+> [!info] Show the players: [[Horn of Balmytria|A bronze horn]]
+> ![[Horn of Balmytria 1.png|300]]
+```
+
+- `[!example]` = place, `[!tip]` = person, `[!info]` = item. Theatre lists them under Places, People and Items.
+  An existing `[!example]` box whose picture is an item picture also counts as an item; don't convert those.
+- The text after `Show the players:` is the label the DM sees and, for people and items, the **name plate on the
+  projector**. For people or items the players don't know by name yet, use the name they know
+  (`[[Note|The Fishwife]]`, `[[Horn of Balmytria|A bronze horn]]`). Never put a secret name there.
 - One or more `![[picture]]` embeds, inside the box (each line starts with `>`). Two portraits = two poses.
 - Several boxes may follow each other under one heading.
 - A DM-only map or secret picture never goes in a box.
@@ -85,7 +94,24 @@ first_visited: Session 4   # any value = the party has been there; empty or miss
 Portraits named after the NPC (`Old Marga.png`, `Old Marga 2.png` for a second pose). Theatre makes
 see-through cut-outs from them so NPCs can stand in front of places.
 
-### 6. campaigns.json (in the Theatre folder, not the vault)
+### 6. Item notes and pictures (folders `item_notes` and `item_images`, optional)
+
+One note per item, with its picture(s) embedded (first one = main picture), named `<Item> 1.png`, `<Item> 2.png`:
+
+```yaml
+---
+found: true                       # have the players seen it or do they hold it? false or missing = not yet
+card_name: A bronze horn          # optional: the name the players know
+location: The Gilded Goose, Rivergate   # optional: where it is now, written like an NPC's location
+---
+```
+
+- `found: true` once the players have seen it. Items not found yet are dimmed, so the DM doesn't reveal them early.
+- `location` makes the item show under **Items → In scene** when that place is on the projector. Leave it out for
+  items the party carries.
+- A picture in `item_images` without a note still shows up as an item, under its file name.
+
+### 7. campaigns.json (in the Theatre folder, not the vault)
 
 ```json
 {
@@ -97,6 +123,8 @@ see-through cut-outs from them so NPCs can stand in front of places.
       "place_notes": "Locations",
       "npc_notes": "NPCs",
       "portrait_images": "NPCs/Images",
+      "item_notes": "Items",
+      "item_images": "Items/Images",
       "skip_folders": ["Templates"]
     }
   }
@@ -104,16 +132,18 @@ see-through cut-outs from them so NPCs can stand in front of places.
 ```
 
 Forward slashes even on Windows. Folders are relative to the vault. Several campaigns can be listed.
+Leave out `item_notes` / `item_images` if the vault has no items with pictures.
 
 ## How to do the conversion
 
 Work in this order and check in with the user at each **stop**.
 
 1. **Find things.** Ask where the vault is and where Theatre is installed (the folder with `server.py`). Ask which
-   folders hold the adventure itself and the session notes.
+   folders hold the adventure itself and the session notes, and whether there are notes or pictures for items.
 2. **Survey, don't edit yet.** Look at the vault: its folders, how NPCs and places are written now (one note each,
    or inside chapters?), where pictures live and how they're named, existing properties, existing callouts.
-   **Stop:** show the user a short mapping: "adventure = X, sessions = Y, NPC notes = Z, place pictures = W", what's
+   **Stop:** show the user a short mapping: "adventure = X, sessions = Y, NPC notes = Z, place pictures = W,
+   items = V", what's
    missing (no NPC notes? pictures named differently?) and your plan. Wait for their OK and their backup.
 3. **Write campaigns.json** in the Theatre folder from the agreed mapping.
 4. **NPCs.** For each NPC note: add `location`, `met` (and `card_name` if the players know a different name) where
@@ -124,28 +154,34 @@ Work in this order and check in with the user at each **stop**.
    Renaming breaks links: rename only with the user's OK, and then update every `![[old name]]` embed in the vault
    (search the whole vault). Add `region` / `first_visited` to place notes, or create minimal place notes if the
    user wants them.
-6. **Boxes.** Go through each adventure and session note, scene by scene. Under the heading where the players first
+6. **Items.** For each item note: add `found` (and `card_name` if the players know it by another name) where
+   missing, and `location` if it sits somewhere the party can find it. Never overwrite a value that's there. Make
+   sure its picture is embedded. If `found` isn't clear from the session notes, ask.
+7. **Boxes.** Go through each adventure and session note, scene by scene. Under the heading where the players first
    see a place, add an `[!example]` box with its picture(s). Where they meet a person, add a `[!tip]` box with the
-   portrait(s) and the name they know. Add a box again in later scenes only when the picture should be shown again
+   portrait(s) and the name they know. Where they find or are shown an item, add an `[!info]` box with its picture
+   and the name they know. Add a box again in later scenes only when the picture should be shown again
    there. Don't add boxes for things the players never see. Only add lines; leave all text as it is.
    Do one chapter or file first, **stop** and let the user check it in Theatre, then continue.
-7. **Cut-outs.** If the user has installed the extras (`pip install -r requirements.txt` in the Theatre folder), run
+8. **Cut-outs.** If the user has installed the extras (`pip install -r requirements.txt` in the Theatre folder), run
    `python make_cutouts.py "<Campaign>"` there (`python3` on a Mac). About 20 seconds per portrait; the first run
-   downloads a model (about 1 GB). Then look at a few results: the whole figure should be kept (robes, held items,
-   wings) with no background left. For a bad one, try `python make_cutouts.py "<Campaign>" --model isnet-anime "<Name>.png"`.
-8. **Report.** List what you added (files and counts), and a clear to-do list: scenes that need a picture that
-   doesn't exist yet, NPCs without a portrait, places without a region. Don't generate pictures unless asked.
+   downloads a model (about 1 GB). It cuts out item pictures too. Then look at a few results: the whole figure
+   should be kept (robes, held items, wings) with no background left. For a bad one, try `python make_cutouts.py "<Campaign>" --model isnet-anime "<Name>.png"`.
+9. **Report.** List what you added (files and counts), and a clear to-do list: scenes that need a picture that
+   doesn't exist yet, NPCs without a portrait, items without a picture, places without a region. Don't generate pictures unless asked.
 
 ## After each session
 
-When the user writes up a session: set `met: true` for NPCs the party met, `first_visited` for new places, update
-NPCs' `location` if they moved, add boxes for new pictures, and make cut-outs for new portraits
+When the user writes up a session: set `met: true` for NPCs the party met, `found: true` for items they found,
+`first_visited` for new places, update NPCs' and items' `location` if they moved, add boxes for new pictures, and
+make cut-outs for new portraits and item pictures
 (`python make_cutouts.py` only makes the missing ones). Theatre picks up changes within about 20 seconds; no restart.
 
 ## Checking your work
 
 Start Theatre (`start.bat` on Windows, `start.command` on a Mac), pick the campaign, choose the adventure file under
-**Adventure**: every box should appear as a picture tile, grouped by scene; its people appear on the right under
-**People → In scene**. Under **Location**, places should be grouped by region. If something is missing, the usual
-cause is a box not starting with `> [!example] Show the players:` / `> [!tip] Show the players:`, an embed outside
+**Adventure**: every place box should appear as a picture tile, grouped by scene; its people appear under
+**People → In scene** and its items under **Items → In scene**. Under **Location**, places should be grouped by region. If something is missing, the usual
+cause is a box not starting with `> [!example] Show the players:` / `> [!tip] Show the players:` /
+`> [!info] Show the players:`, an embed outside
 the box, or a picture name that doesn't match the place or NPC name.

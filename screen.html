@@ -46,13 +46,47 @@
     opacity: 0; transition: opacity 0.5s ease;
   }
   .stage.names .nameplate { opacity: 1; }
-  .scene { position: absolute; inset: 0; }
+  /* isolate: people's stacking stays inside the scene, so a revealed item always sits above them */
+  .scene { position: absolute; inset: 0; isolation: isolate; }
+  /* An item revealed over the scene: the scene darkens, the item floats in the middle with a soft glow. */
+  .reveal { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.8s ease; }
+  .reveal::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.78) 75%); }
+  .reveal.visible { opacity: 1; }
+  /* the item's spot: the middle unless the DM moved it */
+  .reveal .piece {
+    position: absolute; left: 50%; top: 48%; transform: translate(-50%, -50%);
+    transition: left 0.35s ease, top 0.35s ease;
+  }
+  .reveal .pop {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transform: scale(0.82); transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .reveal.visible .pop { transform: scale(1); }
+  .reveal .halo {
+    position: absolute; left: 50%; top: 50%; width: 78vh; height: 78vh; transform: translate(-50%, -50%); border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 214, 150, 0.3) 0%, rgba(255, 190, 110, 0.12) 38%, rgba(0, 0, 0, 0) 68%);
+    animation: halo-pulse 5s ease-in-out infinite;
+  }
+  .reveal .float { position: relative; animation: item-float 5.5s ease-in-out infinite; }
+  .reveal img { display: block; transition: transform 0.3s ease, max-height 0.35s ease, max-width 0.35s ease; }
+  .reveal img.cut { filter: drop-shadow(0 0 1.6vh rgba(255, 222, 160, 0.65)) drop-shadow(0 0 6vh rgba(255, 186, 96, 0.35)); }
+  /* no cut-out (a letter, a map, a painted card): a sheet with a shadow, so it stays readable */
+  .reveal img.sheet { border-radius: 0.5vh; box-shadow: 0 2vh 7vh rgba(0, 0, 0, 0.85), 0 0 4vh rgba(255, 210, 150, 0.18); }
+  .reveal.sheet-only .halo { display: none; }
+  .reveal.sheet-only .float { animation: none; }
+  .reveal .nameplate { position: relative; bottom: auto; margin-top: 3vh; }
+  .reveal.names .nameplate { opacity: 1; }
+  @keyframes item-float { 0%, 100% { transform: translateY(0.8vh); } 50% { transform: translateY(-1.2vh); } }
+  @keyframes halo-pulse { 0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(0.95); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } }
   .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .hint {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #6d5b4c;
     font-family: Georgia, serif; font-size: 2.4vh; text-align: center; line-height: 1.6;
   }
-  @media (prefers-reduced-motion: reduce) { .layer, .caption, .person, .nameplate, .stage::before { transition: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .layer, .caption, .person, .nameplate, .stage::before, .reveal, .reveal .piece, .reveal .pop, .reveal img { transition: none; }
+    .reveal .float, .reveal .halo { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -62,6 +96,7 @@
   <div class="layer" id="layer-b"></div>
   <div class="stage" id="stage"></div>
 </div>
+<div class="reveal" id="reveal"></div>
 <canvas class="fx" id="fx"></canvas>
 <div class="caption" id="caption"></div>
 <script src="/fx.js"></script>
@@ -165,9 +200,120 @@
     effects.set((state && state.fx) || [], state && state.fxLevel, sceneElement);
     const people = (state && state.people) || [];
     showPeople(people, state);
-    const showCaption = Boolean(state && state.caption && state.label && images.length && !people.length);
+    const item = state && state.item && state.item.image ? state.item : null;
+    showItem(item, state);
+    const showCaption = Boolean(state && state.caption && state.label && images.length && !people.length && !item);
     caption.textContent = showCaption ? state.label : "";
     caption.classList.toggle("visible", showCaption);
+  }
+
+  const reveal = document.getElementById("reveal");
+  let shownItemKey = "";
+
+  // Where the item floats, how big, flipped and turned: the middle unless the DM moved it.
+  function placeItem(item) {
+    const piece = reveal.querySelector(".piece");
+    const image = reveal.querySelector("img");
+    const halo = reveal.querySelector(".halo");
+
+    if (!piece || !image) {
+      return;
+    }
+
+    const scale = item.scale || 1;
+    const sheet = image.classList.contains("sheet");
+    piece.style.left = (item.x !== undefined ? item.x * 100 : 50) + "%";
+    piece.style.top = (item.y !== undefined ? item.y * 100 : 48) + "%";
+    image.style.maxHeight = ((sheet ? 80 : 64) * scale) + "vh";
+    image.style.maxWidth = ((sheet ? 80 : 62) * scale) + "vw";
+    image.style.transform = "rotate(" + (item.turn || 0) + "deg)" + (item.flip ? " scaleX(-1)" : "");
+
+    if (halo) {
+      halo.style.width = (78 * scale) + "vh";
+      halo.style.height = (78 * scale) + "vh";
+    }
+  }
+
+  function showItem(item, state) {
+    reveal.classList.toggle("names", Boolean(state && state.caption));
+
+    if (!item) {
+      shownItemKey = "";
+      reveal.classList.remove("visible");
+      return;
+    }
+
+    const itemKey = JSON.stringify([state.campaign, item.image, item.cutout]);
+
+    if (itemKey === shownItemKey) {
+      const plate = reveal.querySelector(".nameplate");
+
+      if (plate) {
+        plate.textContent = item.name || "";
+      }
+
+      placeItem(item);
+      return;
+    }
+
+    shownItemKey = itemKey;
+    const build = function () {
+      reveal.innerHTML = "";
+      reveal.classList.toggle("sheet-only", !item.cutout);
+      const piece = document.createElement("div");
+      piece.className = "piece";
+      const pop = document.createElement("div");
+      pop.className = "pop";
+      const halo = document.createElement("div");
+      halo.className = "halo";
+      const float = document.createElement("div");
+      float.className = "float";
+      const image = document.createElement("img");
+      image.alt = "";
+      image.className = item.cutout ? "cut" : "sheet";
+      const folder = item.cutout ? "/cutout/" : "/img/";
+      image.src = folder + encodeURIComponent(state.campaign || "") + "/" + encodeURIComponent(item.image);
+      const nameplate = document.createElement("div");
+      nameplate.className = "nameplate";
+      nameplate.textContent = item.name || "";
+      float.appendChild(image);
+      pop.appendChild(halo);
+      pop.appendChild(float);
+      pop.appendChild(nameplate);
+      piece.appendChild(pop);
+      reveal.appendChild(piece);
+      placeItem(item);
+      const appear = function () {
+
+        if (shownItemKey === itemKey) {
+          // let the browser lay it out small first, so it grows into place
+          requestAnimationFrame(function () {
+            reveal.classList.add("visible");
+          });
+        }
+      };
+
+      if (image.complete) {
+        appear();
+      } else {
+        image.onload = appear;
+        image.onerror = appear;
+      }
+    };
+
+    // one item replacing another: fade the old one out first
+    if (reveal.classList.contains("visible")) {
+      reveal.classList.remove("visible");
+      setTimeout(function () {
+
+        if (shownItemKey === itemKey) {
+          build();
+        }
+      }, 450);
+      return;
+    }
+
+    build();
   }
 
   function swapPicture(state, images) {

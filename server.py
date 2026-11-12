@@ -53,6 +53,8 @@ def campaigns():
                 "region_file": settings.get("region_file") or None,
                 "npc_notes": settings.get("npc_notes") or "",
                 "portrait_images": settings.get("portrait_images") or "",
+                "item_notes": settings.get("item_notes") or "",
+                "item_images": settings.get("item_images") or "",
                 "skip_folders": set(settings.get("skip_folders") or []),
             }
 
@@ -532,11 +534,18 @@ def list_people(campaign_name):
             "poses": poses[:3],
         })
 
+    # Item pictures share the cut-out folder; they belong to the Items tab.
+    item_stems = {
+        os.path.splitext(entry["image"])[0].lower()
+        for item in list_items(campaign_name)
+        for entry in item["pictures"]
+    }
+
     # Portraits with a cut-out that no note embeds still get listed, under their file name.
     for cutout_name in sorted(available, key=natural_key):
         stem = os.path.splitext(cutout_name)[0]
 
-        if stem in claimed:
+        if stem in claimed or stem in item_stems:
             continue
 
         portrait = next(
@@ -555,6 +564,89 @@ def list_people(campaign_name):
             })
 
     return people
+
+
+def is_found(fields):
+    """An item the players have seen or hold: `found: true` in its note."""
+    return fields.get("found", "").lower() in ("true", "yes")
+
+
+def list_items(campaign_name):
+    """Every item with a picture: the item notes (pictures embedded in them, `found`, `card_name`, `location`),
+    then any picture in the item picture folder that no note embeds, named after its file."""
+    campaign = campaigns().get(campaign_name)
+
+    if not campaign:
+        return []
+
+    available = set(list_cutouts(campaign_name))
+    image_index = build_image_index(campaign_name)
+    items = []
+    claimed = set()
+
+    def picture(image_name):
+        stem = os.path.splitext(image_name)[0].lower()
+        return {"image": image_name, "cutout": stem + ".png" in available}
+
+    if campaign["item_notes"]:
+        notes_folder = os.path.join(campaign["vault"], campaign["item_notes"])
+        note_names = sorted(os.listdir(notes_folder), key=natural_key) if os.path.isdir(notes_folder) else []
+
+        for file_name in note_names:
+
+            if not file_name.endswith(".md"):
+                continue
+
+            with open(os.path.join(notes_folder, file_name), encoding="utf-8") as handle:
+                text = handle.read()
+
+            fields = read_frontmatter(text)
+            pictures = []
+
+            for embed in EMBED_PATTERN.findall(text):
+                image_name = os.path.basename(embed.strip())
+
+                if image_name.lower() not in image_index or any(entry["image"] == image_name for entry in pictures):
+                    continue
+
+                pictures.append(picture(image_name))
+
+            if not pictures:
+                continue
+
+            claimed.update(entry["image"].lower() for entry in pictures)
+            note_name = note_title(text, file_name[:-3])
+            items.append({
+                "name": fields.get("card_name") or note_name,
+                "noteName": note_name,
+                "found": is_found(fields),
+                "location": fields.get("location", ""),
+                "pictures": pictures[:3],
+            })
+
+    if campaign["item_images"]:
+        picture_folder = os.path.join(campaign["vault"], campaign["item_images"])
+        file_names = sorted(os.listdir(picture_folder), key=natural_key) if os.path.isdir(picture_folder) else []
+        loose = {}
+
+        for file_name in file_names:
+
+            if not file_name.lower().endswith(IMAGE_EXTENSIONS) or file_name.lower() in claimed:
+                continue
+
+            item_name = TRAILING_NUMBER.sub("", os.path.splitext(file_name)[0])
+            loose.setdefault(item_name, []).append(picture(file_name))
+
+        for item_name, pictures in loose.items():
+            items.append({
+                "name": item_name,
+                "noteName": "",
+                "found": True,
+                "location": "",
+                "pictures": pictures[:3],
+            })
+
+    return items
 
 
 SOUND_EXTENSIONS = (".mp3", ".ogg", ".wav", ".m4a", ".webm", ".flac")
@@ -813,6 +905,9 @@ class Relay:
 
         for person in state.get("people") or []:
             names.add(str(person.get("image", "")).lower())
+
+        if isinstance(state.get("item"), dict):
+            names.add(str(state["item"].get("image", "")).lower())
 
         return names
 
@@ -1152,6 +1247,9 @@ class ScreenHandler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/people":
             return self.send_json(list_people(campaign_name))
+
+        if parsed.path == "/api/items":
+            return self.send_json(list_items(campaign_name))
 
         if parsed.path == "/api/saved-scenes":
             return self.send_json(saved_scenes_for(campaign_name))

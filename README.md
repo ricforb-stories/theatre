@@ -6,6 +6,8 @@ your scene pictures on it while you run the game from a DM panel:
 - **Places and handouts** straight from your adventure notes, scene by scene.
 - **NPCs standing in front of the place**, visual-novel style, with name plates (see-through cut-outs made from
   your portraits).
+- **Items revealed over the scene**: the place darkens and the sword, amulet or letter floats in the middle with a
+  soft glow.
 - **Weather and mood**: rain, storm with lightning, snow, mist, ash, embers, fireflies, crows, underwater, old
   recording, torchlight, night, dream and more.
 - **Sound**: rain, wind, fire, crowds, thunder, swords… built in, plus your own sound files.
@@ -110,7 +112,7 @@ and every feature of the DM panel.
 - A **browser** (Chrome, Edge or Firefox).
 - Your campaign in an **Obsidian vault**, with pictures for places and NPCs.
 - Optional: **Claude Code**, to prepare your vault with the included skill.
-- Optional: about 2 GB of disk space for the cut-out tool (people in front of places).
+- Optional: about 2 GB of disk space for the cut-out tool (people in front of places, floating items).
 
 ## Install
 
@@ -135,6 +137,8 @@ Keep the Theatre folder **outside** your vault, so Obsidian doesn't sync or inde
       "place_notes": "Locations",
       "npc_notes": "NPCs",
       "portrait_images": "NPCs/Images",
+      "item_notes": "Items",
+      "item_images": "Items/Images",
       "skip_folders": ["Templates"]
     }
   }
@@ -149,6 +153,8 @@ Keep the Theatre folder **outside** your vault, so Obsidian doesn't sync or inde
 | `place_notes` | Folder with one note per place (for regions). Leave it out if you have none. |
 | `npc_notes` | Folder with one note per NPC. |
 | `portrait_images` | Folder with NPC portraits (for the cut-outs). |
+| `item_notes` | Optional: folder with one note per item (sword, amulet, letter). |
+| `item_images` | Optional: folder with item pictures (for the cut-outs). A picture here without a note still shows up as an item. |
 | `skip_folders` | Folders to ignore when looking for pictures. |
 | `region_file` | Optional, instead of place notes: a file in the Theatre folder like `regions-mycampaign.json` with `{"The Gilded Goose": "Rivergate", …}` listing visited places and their regions. |
 
@@ -159,7 +165,7 @@ If you'd rather not edit this by hand, the Claude skill writes it for you.
 
 ## How your vault needs to look
 
-Theatre finds pictures through four simple conventions. The Claude skill applies them for you, but here they are:
+Theatre finds pictures through five simple conventions. The Claude skill applies them for you, but here they are:
 
 **1. "Show the players" boxes in your adventure notes.** Under the heading of the scene where the players see
 something, add a box (an Obsidian callout) with the picture inside:
@@ -172,11 +178,15 @@ something, add a box (an Obsidian callout) with the picture inside:
 
 > [!tip] Show the players: [[Old Marga|The Fishwife]]
 > ![[Old Marga.png|300]] ![[Old Marga 2.png|300]]
+
+> [!info] Show the players: [[Horn of Balmytria|A bronze horn]]
+> ![[Horn of Balmytria 1.png|300]]
 ```
 
-- `[!example]` is a **place** (or a handout); `[!tip]` is a **person**.
-- The text after `Show the players:` is the label. For people it's also the **name plate on the projector**, so
-  use the name the players know.
+- `[!example]` is a **place** (or a handout); `[!tip]` is a **person**; `[!info]` is an **item**. An `[!example]`
+  box showing an item's picture also counts as an item for the Items tab, so older boxes work as they are.
+- The text after `Show the players:` is the label. For people and items it's also the **name plate on the
+  projector**, so use the name the players know.
 - Pictures must be inside the box (every line starts with `>`). Two portraits = two poses.
 
 **2. NPC notes** (one note per NPC, in `npc_notes`) with the portrait embedded and these properties:
@@ -192,8 +202,8 @@ card_name: The Fishwife
 `location` is "Place, Region", with the place written exactly like its picture name. `met: true` once the party
 has met them; unmet NPCs are dimmed in the panel. `card_name` is optional: the name the players know.
 
-**3. Picture names.** Places: `<Place> 1.png`, `<Place> 2.png`. People: `<Name>.png`, `<Name> 2.png`. A place
-picture with "map" in its name is treated as DM-only.
+**3. Picture names.** Places: `<Place> 1.png`, `<Place> 2.png`. People: `<Name>.png`, `<Name> 2.png`. Items:
+`<Item> 1.png`, `<Item> 2.png`. A place picture with "map" in its name is treated as DM-only.
 
 **4. Place notes** (optional, in `place_notes`), named exactly like the place, with:
 
@@ -205,6 +215,20 @@ first_visited: Session 4
 ```
 
 Places with a `first_visited` are listed under their region; the rest under "Not visited yet".
+
+**5. Item notes** (optional, in `item_notes`), one per item, with its picture embedded and these properties:
+
+```yaml
+---
+found: true
+card_name: A bronze horn
+location: The Gilded Goose, Rivergate
+---
+```
+
+`found: true` once the players have seen or hold it; items not found yet are dimmed in the panel. `card_name` is
+optional: the name the players know. `location` is optional, written like an NPC's: the item then shows under
+**In scene** when that place is on the projector.
 
 ## Prepare your vault with Claude
 
@@ -243,7 +267,7 @@ visited, and adds boxes for new pictures.
 
 **The DM panel**
 
-- **Left: three tabs, Places, People and Scenes.** The left side is where you pick things; the right side is the stage.
+- **Left: four tabs, Places, People, Items and Scenes.** The left side is where you pick things; the right side is the stage.
 - **Places.** *Adventure* lists the files from `browse`; pick one and its pictures appear as tiles, grouped
   by scene. *Location* lists places by region. Click a tile to show it; **Shift+click** puts a second picture beside
   it; **Both** shows a pair.
@@ -252,6 +276,13 @@ visited, and adds boxes for new pictures.
   to stand that person in front of the place (up to four), and click again or ✕ to send them off. Extra poses sit
   as small pictures under the card. **Portrait** (top left of the card when you point at it) shows their full
   picture instead. **S / M / L** sets the card size.
+- **Items.** *In scene* shows the items pictured in the open file and the items whose note puts them at the place on
+  screen; *All* shows every item, found ones first, with a name filter. Click an item's card to **reveal** it: the
+  scene darkens and the item floats in the middle with a soft glow (an item without a cut-out shows as a picture
+  with a shadow, so a letter stays readable). Click again, or ✕ on the monitor, to put it away; showing a new place
+  puts it away too. On the monitor, drag the item to move it, turn the mouse wheel over it to resize it,
+  **Shift**+wheel to turn it, click ⇋ to flip it, and double-click to put it back in the middle. People stay on stage behind it. **Picture** (top left of the card) shows the whole picture as
+  the scene instead, for a handout the players should study.
 - **Right: the monitor** shows exactly what's on the projector. Below it: **Effects** and **Sounds**, open. Click
   their title to fold one to a one-line summary.
 - **Arrange people on the monitor:** drag a person to move them (sideways, up to stand further back, or down past the bottom edge to bring them close), turn
@@ -260,19 +291,20 @@ visited, and adds boxes for new pictures.
 - **Prepare mode** (top): your clicks build a green **Ready** view without touching the projector; press **Space**
   or **Show it** to reveal everything at once. **B** (black screen) always works immediately.
 - **Fill screen (F)** crops pictures to fill the projector (people and effects always fill it).
-- **Names (C)** shows name plates under people.
+- **Names (C)** shows name plates under people and under a revealed item.
 - Drag the line between the two halves to resize them; the panel remembers.
 
 **Keys:** → / ← next or previous picture in the file · **B** black screen · **C** names · **F** fill screen ·
-**K** shake · **X** clear people · **/** search pictures · **P** find a person · **Space** reveal (prepare mode).
+**K** shake · **X** clear people and item · **/** search pictures · **P** find a person · **I** find an item ·
+**Space** reveal (prepare mode).
 The **Keys** button in the panel lists them too.
 
 ## Saved scenes
 
-The **Scenes** tab (on the left, next to Places and People) keeps set-ups you want to bring back with one click: "the tavern brawl", "the
+The **Scenes** tab (on the left, next to Places, People and Items) keeps set-ups you want to bring back with one click: "the tavern brawl", "the
 throne room at night".
 
-- Set up the place, the people (with their positions, sizes and flips), effects, Fill screen, names and the loops
+- Set up the place, the people (with their positions, sizes and flips), a revealed item, effects, Fill screen, names and the loops
   you want, open the **Scenes** tab, type a name and click **Save scene** (or press Enter). Saving with a name that already exists replaces that scene.
 - Quicker: **Save scene…** under the monitor (below Show it) opens a small box with the name filled in; Enter saves
   (it says **Update** when that name already exists), Escape cancels.
@@ -286,7 +318,8 @@ throne room at night".
 
 ## People in front of places (cut-outs)
 
-To stand NPCs in front of a place, Theatre needs a see-through copy of each portrait. These are made by an
+To stand NPCs in front of a place, and to float items over it, Theatre needs a see-through copy of each portrait
+and item picture. These are made by an
 optional tool that runs on your computer (no internet needed after the first download).
 
 1. Install it once. Open a terminal in the Theatre folder (Windows: in the folder's address bar type `cmd` and
@@ -294,7 +327,7 @@ optional tool that runs on your computer (no internet needed after the first dow
    - Windows: `pip install -r requirements.txt`
    - Mac: `pip3 install -r requirements.txt`
 2. Double-click **make-cutouts.bat** (Windows) or **make-cutouts.command** (Mac). It makes cut-outs for every
-   portrait that doesn't have one yet: about 20 seconds each. The first run downloads the cut-out model
+   portrait and item picture (`item_images`) that doesn't have one yet: about 20 seconds each. The first run downloads the cut-out model
    (about 1 GB).
 3. New portraits later: run it again; it only does the new ones. A bad cut-out (part of a robe missing, background
    left over): delete it from `cutouts/<campaign>/` and run again, or try the other model:
@@ -305,7 +338,9 @@ where a painting fades into the paper are removed, while white clothes and hair 
 made before this clean-up existed can be fixed in seconds with `python make_cutouts.py --reclean` (the untouched
 originals are kept in `cutouts/_originals/`).
 
-People without a cut-out still work: they show their normal portrait instead, marked "no cut-out".
+People without a cut-out still work: they show their normal portrait instead, marked "no cut-out". Items without
+one are revealed as a picture with a shadow. For letters, maps and other handouts the players should read, use the
+item card's **Picture** button: it fills the screen with the whole page.
 
 ## Effects
 

@@ -1,7 +1,8 @@
-"""Make see-through cut-outs of NPC portraits, so people can stand in front of a place on the projector.
+"""Make see-through cut-outs of NPC portraits and item pictures, so people can stand in front of a place on the
+projector and items can float over it.
 
-Cut-outs go to cutouts/<campaign>/<portrait name>.png next to this script. The vault is only read, never written.
-Each campaign's portrait folder comes from campaigns.json ("portrait_images").
+Cut-outs go to cutouts/<campaign>/<picture name>.png next to this script. The vault is only read, never written.
+Each campaign's folders come from campaigns.json ("portrait_images", and "item_images" if set).
 
     python make_cutouts.py                                         # every campaign: portraits without a cut-out yet
     python make_cutouts.py "My Campaign"                           # one campaign
@@ -27,8 +28,8 @@ DEFAULT_MODEL = "birefnet-general"
 PORTRAIT_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
 
-def portrait_folders():
-    """Each campaign's portrait folder, from campaigns.json."""
+def picture_folders():
+    """Each campaign's folders to cut out, from campaigns.json: the NPC portraits, and the item pictures if set."""
     with open(os.path.join(APP_FOLDER, "campaigns.json"), encoding="utf-8") as handle:
         data = json.load(handle)
 
@@ -39,8 +40,12 @@ def portrait_folders():
         if name.startswith("_") or not isinstance(settings, dict) or not settings.get("vault"):
             continue
 
-        relative = settings.get("portrait_images") or os.path.join(settings.get("npc_notes") or "", "Images")
-        folders[name] = os.path.join(os.path.expanduser(settings["vault"]), relative)
+        vault = os.path.expanduser(settings["vault"])
+        portraits = settings.get("portrait_images") or os.path.join(settings.get("npc_notes") or "", "Images")
+        folders[name] = [os.path.join(vault, portraits)]
+
+        if settings.get("item_images"):
+            folders[name].append(os.path.join(vault, settings["item_images"]))
 
     return folders
 
@@ -188,14 +193,28 @@ def make_cutout(session, source_path, target_path):
     result.save(target_path)
 
 
-def cut_campaign(session, arguments, campaign_name, source_folder):
-    """Cuts out one campaign's portraits. Returns the session (a fresh one if the old one had to be replaced)."""
+def pictures_in(source_folders):
+    """Every picture in the folders, by file name (the first folder wins if two hold the same name)."""
+    pictures = {}
+
+    for source_folder in source_folders:
+
+        if not os.path.isdir(source_folder):
+            continue
+
+        for file_name in sorted(os.listdir(source_folder)):
+
+            if file_name.lower().endswith(PORTRAIT_EXTENSIONS):
+                pictures.setdefault(file_name, os.path.join(source_folder, file_name))
+
+    return pictures
+
+
+def cut_campaign(session, arguments, campaign_name, source_folders):
+    """Cuts out one campaign's portraits and item pictures. Returns the session (a fresh one if the old one had to be replaced)."""
     target_folder = cutout_folder(campaign_name)
-    requested = arguments.names or sorted(
-        file_name
-        for file_name in os.listdir(source_folder)
-        if file_name.lower().endswith(PORTRAIT_EXTENSIONS)
-    )
+    pictures = pictures_in(source_folders)
+    requested = arguments.names or sorted(pictures)
 
     for file_name in requested:
         stem = os.path.splitext(file_name)[0]
@@ -204,7 +223,11 @@ def cut_campaign(session, arguments, campaign_name, source_folder):
         if not arguments.names and os.path.exists(target_path):
             continue
 
-        source_path = os.path.join(source_folder, file_name)
+        if file_name not in pictures:
+            print("not found:", file_name)
+            continue
+
+        source_path = pictures[file_name]
 
         try:
             make_cutout(session, source_path, target_path)
@@ -232,25 +255,21 @@ def reclean_campaigns(arguments, folders):
     campaign_names = [arguments.campaign] if arguments.campaign else list(folders)
 
     for campaign_name in campaign_names:
-        source_folder = folders[campaign_name]
         target_folder = cutout_folder(campaign_name)
-
-        if not os.path.isdir(source_folder):
-            continue
-
-        portraits = {os.path.splitext(name)[0]: name for name in os.listdir(source_folder) if name.lower().endswith(PORTRAIT_EXTENSIONS)}
+        pictures = pictures_in(folders[campaign_name])
+        sources = {os.path.splitext(name)[0]: name for name in pictures}
         changed = 0
 
         for cutout_name in sorted(os.listdir(target_folder)):
             stem = os.path.splitext(cutout_name)[0]
 
-            if not cutout_name.endswith(".png") or stem not in portraits:
+            if not cutout_name.endswith(".png") or stem not in sources:
                 continue
 
-            if arguments.names and portraits[stem] not in arguments.names:
+            if arguments.names and sources[stem] not in arguments.names:
                 continue
 
-            if reclean(os.path.join(source_folder, portraits[stem]), os.path.join(target_folder, cutout_name)):
+            if reclean(pictures[sources[stem]], os.path.join(target_folder, cutout_name)):
                 changed += 1
 
         print("%s: cleaned %d cut-outs" % (campaign_name, changed))
@@ -264,7 +283,7 @@ def main():
     parser.add_argument("--suffix", default="")
     parser.add_argument("--reclean", action="store_true", help="only clean up existing cut-outs from light backgrounds")
     arguments = parser.parse_args()
-    folders = portrait_folders()
+    folders = picture_folders()
 
     if arguments.campaign and arguments.campaign not in folders:
         raise SystemExit("No campaign called %r in campaigns.json." % arguments.campaign)
@@ -277,14 +296,15 @@ def main():
     campaign_names = [arguments.campaign] if arguments.campaign else list(folders)
 
     for campaign_name in campaign_names:
-        source_folder = folders[campaign_name]
+        source_folders = folders[campaign_name]
 
-        if not os.path.isdir(source_folder):
-            print("skipping %s: no folder %s" % (campaign_name, source_folder))
-            continue
+        for source_folder in source_folders:
+
+            if not os.path.isdir(source_folder):
+                print("skipping in %s: no folder %s" % (campaign_name, source_folder))
 
         print("== %s" % campaign_name)
-        session = cut_campaign(session, arguments, campaign_name, source_folder)
+        session = cut_campaign(session, arguments, campaign_name, source_folders)
 
 
 if __name__ == "__main__":

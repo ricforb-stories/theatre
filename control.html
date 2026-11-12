@@ -85,7 +85,17 @@
   #take { width: 100%; margin-top: 8px; padding: 9px; font-weight: 600; border-color: var(--ready); background: #1d2a21; color: #d9f3e2; }
   #take:disabled { opacity: 0.45; cursor: default; }
 
-  .monitor .scene { position: absolute; inset: 0; }
+  .monitor .scene { position: absolute; inset: 0; isolation: isolate; }
+  /* a revealed item: the scene darkens and the item sits in the middle, as on the projector */
+  .showpiece { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.78) 75%); }
+  .showpiece .piece-box { position: absolute; left: 50%; top: 48%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
+  .showpiece .piece-box.movable { pointer-events: auto; cursor: grab; touch-action: none; }
+  .showpiece .piece-box.movable:active { cursor: grabbing; }
+  .showpiece img { display: block; min-height: 0; pointer-events: none; }
+  .showpiece img.cut { filter: drop-shadow(0 0 1.2cqw rgba(255, 222, 160, 0.65)) drop-shadow(0 0 4cqw rgba(255, 186, 96, 0.35)); }
+  .showpiece img.sheet { border-radius: 3px; box-shadow: 0 1.5cqw 5cqw rgba(0, 0, 0, 0.85); }
+  .showpiece .who { margin-top: 1.5cqw; pointer-events: auto; display: flex; align-items: center; font-size: 0.75rem; background: rgba(20,8,8,0.82); border: 1px solid rgba(201,162,39,0.6); border-radius: 3px; padding: 0 6px; white-space: nowrap; }
+  .showpiece .who .remove { margin-left: 6px; padding: 0 5px; font-size: 0.7rem; line-height: 1.3; background: rgba(0,0,0,0.6); border-color: var(--live); }
   .monitor canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .fx-bar { gap: 5px; }
   .fx-bar .fx-kind { font-size: 0.85rem; padding: 4px 9px; }
@@ -129,7 +139,7 @@
   .saved-scene:hover { border-color: var(--brass); }
   .saved-scene.current { border-color: var(--brass); box-shadow: 0 0 0 2px var(--brass); }
   .mini-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #000; container-type: inline-size; }
-  .mini-stage .scene { position: absolute; inset: 0; }
+  .mini-stage .scene { position: absolute; inset: 0; isolation: isolate; }
   .mini-stage .bg { position: absolute; inset: 0; display: flex; gap: 2%; align-items: center; justify-content: center; padding: 2%; }
   .mini-stage .bg img { max-width: 100%; max-height: 100%; min-width: 0; flex: 1 1 0; object-fit: contain; }
   .mini-stage.staged .bg { padding: 0; }
@@ -172,9 +182,12 @@
   .note { color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; }
 
   /* place groups sit side by side, so a place with one person doesn't take a whole row */
-  #people-grid { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 6px 18px; }
-  #people-grid > .scene { margin-bottom: 4px; max-width: 100%; }
-  #people-grid > .scene h3 { width: 0; min-width: 100%; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #people-grid, #items-grid { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: flex-start; gap: 6px 18px; }
+  #people-grid > .scene, #items-grid > .scene { margin-bottom: 4px; max-width: 100%; }
+  #people-grid > .scene h3, #items-grid > .scene h3 { width: 0; min-width: 100%; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* item cards: square, a warm glow behind, whole picture always visible (swords and letters aren't portrait-shaped) */
+  .item-card .pose.main { aspect-ratio: 1 / 1; background: radial-gradient(ellipse at 50% 45%, #3a2a14 0%, #000 72%); }
+  .item-card .pose img, .item-card .pose.no-cut img { object-fit: contain; }
   .person-grid { display: flex; flex-wrap: wrap; gap: 10px; }
   .person-card { position: relative; flex: none; width: var(--person-size, 170px); padding: 0; gap: 0; overflow: hidden; }
   .person-stage { position: relative; }
@@ -227,8 +240,9 @@
     <div class="keys-panel">
       Click a picture to show it; <kbd>Shift</kbd>+click puts a second one beside it.<br>
       Click a person's pose to stand them in front of the place (up to four); click again or ✕ to send them off. On the monitor: drag a person to move them, mouse wheel to resize, ⇋ to turn them around, double-click to put them back.<br>
+      Click an item to reveal it over the scene, glowing; click again or ✕ to put it away. A new place puts it away too. On the monitor: drag it to move it, mouse wheel to resize, <kbd>Shift</kbd>+wheel to turn it, ⇋ to flip, double-click to put it back in the middle.<br>
       <b>Prepare mode:</b> clicks build the <b>Ready</b> view; <kbd>Space</kbd> or <b>Show it</b> puts it on the projector.<br>
-      <kbd>→</kbd> / <kbd>←</kbd> next / previous picture in the file · <kbd>X</kbd> clear people<br>
+      <kbd>→</kbd> / <kbd>←</kbd> next / previous picture in the file · <kbd>X</kbd> clear people and item · <kbd>I</kbd> find an item<br>
       <b>Share</b> (top right): a link and password so a laptop on the same Wi-Fi can run this panel too.<br>
       <kbd>/</kbd> search places · <kbd>P</kbd> find a person · <kbd>B</kbd> black screen (always at once, clears effects too) · <kbd>C</kbd> names · <kbd>F</kbd> fill screen (crop pictures to the whole projector; people and effects always fill)<br>
       <b>Sounds</b> play from this window: loops run until clicked again, the others play once. Your own files go in the <b>sounds</b> folder.<br>
@@ -242,6 +256,7 @@
     <div class="pane-tabs" role="tablist">
       <button id="tab-places" class="pane-tab" role="tab" aria-selected="true">Places</button>
       <button id="tab-people" class="pane-tab" role="tab" aria-selected="false" title="People (P)">People</button>
+      <button id="tab-items" class="pane-tab" role="tab" aria-selected="false" title="Items (I)">Items</button>
       <button id="tab-scenes" class="pane-tab" role="tab" aria-selected="false">Scenes</button>
     </div>
 
@@ -283,6 +298,28 @@
         <span class="count" id="people-count"></span>
       </div>
       <div class="pane-scroll" id="people-grid"><p class="empty">Loading people…</p></div>
+    </div>
+
+    <div class="pane-view" id="items-view" hidden>
+      <div class="pane-bar">
+        <div class="segmented" role="group" aria-label="Which items">
+          <button id="item-scope-scene" aria-pressed="true" title="Items pictured in the open file, and items whose note puts them at the place on screen">In scene</button>
+          <button id="item-scope-all" aria-pressed="false">All</button>
+        </div>
+        <input id="items-filter" type="search" placeholder="Name or place (I)" aria-label="Filter items by name or place">
+        <select id="items-found" aria-label="Found or not">
+          <option value="all">Found + not found</option>
+          <option value="found">Found only</option>
+          <option value="unfound">Not found yet</option>
+        </select>
+        <div class="segmented people-size" role="group" aria-label="Card size">
+          <button data-size="small" aria-pressed="false" title="Small cards">S</button>
+          <button data-size="medium" aria-pressed="true" title="Medium cards">M</button>
+          <button data-size="large" aria-pressed="false" title="Large cards">L</button>
+        </div>
+        <span class="count" id="items-count"></span>
+      </div>
+      <div class="pane-scroll" id="items-grid"><p class="empty">Loading items…</p></div>
     </div>
 
     <div class="pane-view" id="scenes-view" hidden>
@@ -420,8 +457,18 @@
   const peopleMet = document.getElementById("people-met");
   const peopleCount = document.getElementById("people-count");
   const peopleGrid = document.getElementById("people-grid");
+  const itemScopeSceneButton = document.getElementById("item-scope-scene");
+  const itemScopeAllButton = document.getElementById("item-scope-all");
+  const itemsFilter = document.getElementById("items-filter");
+  const itemsFound = document.getElementById("items-found");
+  const itemsCount = document.getElementById("items-count");
+  const itemsGrid = document.getElementById("items-grid");
 
   let campaign = "";
+  let items = [];
+  let itemsLoaded = false;
+  let itemScope = "scene";
+  let fileProps = [];
   let mode = "file";
   let locations = [];
   let flatList = [];
@@ -637,7 +684,7 @@
   // ---------- what's on screen: live (projector) and ready (prepare mode) ----------
 
   function emptyState() {
-    return { images: [], label: "", campaign: campaign, people: [], fx: [], fxLevel: "medium" };
+    return { images: [], label: "", campaign: campaign, people: [], item: null, fx: [], fxLevel: "medium" };
   }
 
   function editing() {
@@ -821,22 +868,40 @@
         label: state.label + " · " + label,
         campaign: campaign,
         people: [],
+        item: null,
         fx: state.fx || [],
         fxLevel: state.fxLevel || "medium"
       });
       return;
     }
 
-    // A new place keeps the people standing there; a full portrait clears them.
+    // A new place keeps the people standing there; a full portrait clears them. A revealed item is put away.
     const keptPeople = portrait || !sameCampaign ? [] : state.people.slice();
     setEditing({
       images: images.slice(0, 2),
       label: label,
       campaign: campaign,
       people: keptPeople,
+      item: null,
       fx: state.fx || [],
       fxLevel: state.fxLevel || "medium"
     });
+  }
+
+  // Reveal an item over the scene, or put it away when it's the one already shown.
+  function toggleItem(imageName, name) {
+    const state = editing();
+    const base = state.campaign === campaign
+      ? state
+      : Object.assign(emptyState(), { fx: state.fx || [], fxLevel: state.fxLevel || "medium" });
+    const current = base.item;
+    const sameItem = Boolean(current) && current.image === imageName;
+    const nextItem = sameItem ? null : { image: imageName, name: name, cutout: hasCutout(imageName) };
+    setEditing(Object.assign({}, base, { item: nextItem, campaign: campaign }));
+  }
+
+  function removeItem() {
+    setEditing(Object.assign({}, editing(), { item: null }));
   }
 
   function togglePerson(imageName, label) {
@@ -883,8 +948,178 @@
     }));
   }
 
-  function clearPeople() {
-    setEditing(Object.assign({}, editing(), { people: [] }));
+  function clearStage() {
+    setEditing(Object.assign({}, editing(), { people: [], item: null }));
+  }
+
+  // Where the item floats: the middle unless the DM moved it. Sizes match the projector (64vh = 36cqw on 16:9).
+  function itemPlacement(item) {
+    return {
+      left: item.x !== undefined ? item.x * 100 : 50,
+      top: item.y !== undefined ? item.y * 100 : 48,
+      scale: item.scale || 1,
+      flip: Boolean(item.flip),
+      turn: item.turn || 0,
+    };
+  }
+
+  function placePiece(box, image, place) {
+    const sheet = image.classList.contains("sheet");
+    box.style.left = place.left + "%";
+    box.style.top = place.top + "%";
+    image.style.maxHeight = ((sheet ? 45 : 36) * place.scale) + "cqw";
+    image.style.maxWidth = ((sheet ? 80 : 62) * place.scale) + "cqw";
+    image.style.transform = "rotate(" + place.turn + "deg)" + (place.flip ? " scaleX(-1)" : "");
+  }
+
+  // Change the revealed item. commit: redraw the panel too (otherwise only the projector/state follow, for dragging).
+  function updateItem(changes, commit) {
+    const state = editing();
+
+    if (!state.item) {
+      return;
+    }
+
+    const changed = Object.assign({}, state.item, changes);
+    Object.keys(changes).forEach(function (key) {
+
+      if (changes[key] === undefined) {
+        delete changed[key];
+      }
+    });
+    const next = Object.assign({}, state, { item: changed });
+
+    if (commit) {
+      setEditing(next);
+      return;
+    }
+
+    if (prepare) {
+      ready = next;
+    } else {
+      live = next;
+      send();
+    }
+  }
+
+  // Drag to move, mouse wheel to resize, Shift+wheel to turn, double-click to put back.
+  function makeItemMovable(monitor, box, image, item) {
+    const start = itemPlacement(item);
+    let dragging = null;
+    let lastSent = 0;
+
+    box.classList.add("movable");
+    box.title = "Drag to move · mouse wheel to resize · Shift+wheel to turn · double-click to put back";
+
+    box.addEventListener("pointerdown", function (event) {
+
+      if (event.target.closest("button")) {
+        return;
+      }
+
+      event.preventDefault();
+      box.setPointerCapture(event.pointerId);
+      dragging = { pointerX: event.clientX, pointerY: event.clientY, left: start.left, top: start.top };
+    });
+
+    box.addEventListener("pointermove", function (event) {
+
+      if (!dragging) {
+        return;
+      }
+
+      const bounds = monitor.getBoundingClientRect();
+      const left = Math.max(0, Math.min(100, dragging.left + (event.clientX - dragging.pointerX) / bounds.width * 100));
+      const top = Math.max(0, Math.min(100, dragging.top + (event.clientY - dragging.pointerY) / bounds.height * 100));
+      dragging.current = { left: left, top: top };
+      placePiece(box, image, Object.assign({}, start, { left: left, top: top }));
+
+      // the projector follows along, a few times a second
+      if (Date.now() - lastSent > 70) {
+        lastSent = Date.now();
+        updateItem({ x: left / 100, y: top / 100 }, false);
+      }
+    });
+
+    box.addEventListener("pointerup", function (event) {
+
+      if (!dragging) {
+        return;
+      }
+
+      box.releasePointerCapture(event.pointerId);
+      const moved = dragging.current;
+      dragging = null;
+
+      if (moved) {
+        updateItem({ x: moved.left / 100, y: moved.top / 100 }, true);
+      }
+    });
+
+    box.addEventListener("wheel", function (event) {
+      event.preventDefault();
+      // some mice send Shift+wheel as a sideways scroll
+      const delta = event.deltaY || event.deltaX;
+
+      if (event.shiftKey) {
+        const turn = Math.round((start.turn + (delta < 0 ? -5 : 5)) % 360);
+        updateItem({ turn: turn }, true);
+        return;
+      }
+
+      const factor = delta < 0 ? 1.08 : 1 / 1.08;
+      const scale = Math.max(0.3, Math.min(2.5, start.scale * factor));
+      updateItem({ scale: scale }, true);
+    }, { passive: false });
+
+    box.addEventListener("dblclick", function (event) {
+
+      if (event.target.closest("button")) {
+        return;
+      }
+
+      updateItem({ x: undefined, y: undefined, scale: undefined, flip: undefined, turn: undefined }, true);
+    });
+  }
+
+  // The revealed item over a monitor or a saved scene's preview. editable: move it, flip it, ✕ to put it away.
+  function drawShowpiece(container, item, imageCampaign, editable) {
+    const piece = document.createElement("div");
+    piece.className = "showpiece";
+    const box = document.createElement("div");
+    box.className = "piece-box";
+    const image = document.createElement("img");
+    image.className = item.cutout ? "cut" : "sheet";
+    image.src = item.cutout ? cutoutUrl(item.image, imageCampaign) : imageUrl(item.image, imageCampaign);
+    image.alt = item.name || "";
+    image.draggable = false;
+    box.appendChild(image);
+    placePiece(box, image, itemPlacement(item));
+
+    if (editable) {
+      const who = document.createElement("span");
+      who.className = "who";
+      who.appendChild(document.createTextNode(item.name || ""));
+      const flip = document.createElement("button");
+      flip.className = "remove flip";
+      flip.textContent = "⇋";
+      flip.title = "Turn " + (item.name || "the item") + " the other way";
+      flip.addEventListener("click", function () {
+        updateItem({ flip: !item.flip }, true);
+      });
+      who.appendChild(flip);
+      const remove = document.createElement("button");
+      remove.className = "remove";
+      remove.textContent = "✕";
+      remove.title = "Put " + (item.name || "the item") + " away";
+      remove.addEventListener("click", removeItem);
+      who.appendChild(remove);
+      box.appendChild(who);
+      makeItemMovable(container, box, image, item);
+    }
+
+    piece.appendChild(box);
+    container.appendChild(piece);
   }
 
   // ---------- drawing ----------
@@ -963,11 +1198,15 @@
       sceneBox.appendChild(actor);
     });
 
+    if (state.item) {
+      drawShowpiece(element, state.item, state.campaign, editable);
+    }
+
     element.appendChild(preview.canvas);
     preview.effects.set(state.fx || [], state.fxLevel, sceneBox);
     preview.scene = sceneBox;
 
-    if (!state.images.length && !staged.length && !(state.fx || []).length) {
+    if (!state.images.length && !staged.length && !state.item && !(state.fx || []).length) {
       const note = document.createElement("div");
       note.className = "empty-note";
       note.textContent = "Black";
@@ -1153,13 +1392,14 @@
     });
     const placeLabel = state.images.length ? state.label : "Black screen";
     const withPeople = names.length ? placeLabel + " — with " + names.join(" and ") : placeLabel;
+    const withItem = state.item ? withPeople + " · showing " + state.item.name : withPeople;
     const effects = (state.fx || []).map(fxName);
-    return effects.length ? withPeople + " · " + effects.join(", ") + " (" + (state.fxLevel || "medium") + ")" : withPeople;
+    return effects.length ? withItem + " · " + effects.join(", ") + " (" + (state.fxLevel || "medium") + ")" : withItem;
   }
 
   function sameState(first, second) {
-    const firstKey = [first.images, first.people, first.fx || [], first.fxLevel || "medium"];
-    const secondKey = [second.images, second.people, second.fx || [], second.fxLevel || "medium"];
+    const firstKey = [first.images, first.people, first.item || null, first.fx || [], first.fxLevel || "medium"];
+    const secondKey = [second.images, second.people, second.item || null, second.fx || [], second.fxLevel || "medium"];
     return JSON.stringify(firstKey) === JSON.stringify(secondKey);
   }
 
@@ -1190,16 +1430,29 @@
       renderPeople();
     }
 
+    if (itemScope === "scene" && sceneKey !== lastSceneKey) {
+      renderItems();
+    }
+
     lastSceneKey = sceneKey;
   }
 
-  function markPictures() {
-    const liveImages = live.images.concat(live.people.map(function (person) {
+  // every picture a state puts on screen: the place, the people and the revealed item
+  function picturesOf(state) {
+    const pictures = state.images.concat((state.people || []).map(function (person) {
       return person.image;
     }));
-    const readyImages = prepare ? ready.images.concat(ready.people.map(function (person) {
-      return person.image;
-    })) : [];
+
+    if (state.item) {
+      pictures.push(state.item.image);
+    }
+
+    return pictures;
+  }
+
+  function markPictures() {
+    const liveImages = picturesOf(live);
+    const readyImages = prepare ? picturesOf(ready) : [];
     document.querySelectorAll(".thumb, .pose").forEach(function (element) {
       element.classList.toggle("is-live", liveImages.includes(element.dataset.image));
       element.classList.toggle("is-ready", !liveImages.includes(element.dataset.image) && readyImages.includes(element.dataset.image));
@@ -1262,6 +1515,7 @@
     scenesArea.innerHTML = "";
     flatList = [];
     fileCast = [];
+    fileProps = [];
     cursorIndex = -1;
     const scenes = [];
     allScenes.forEach(function (scene) {
@@ -1270,6 +1524,8 @@
 
         if (item.kind === "tip") {
           fileCast.push({ heading: scene.heading, label: item.label, images: item.images });
+        } else if (item.kind === "info") {
+          fileProps.push({ heading: scene.heading, label: item.label, images: item.images });
         } else {
           placeItems.push(item);
         }
@@ -1479,8 +1735,8 @@
     }
   }
 
-  // the left side's three tabs: Places, People, Scenes
-  const TABS = ["places", "people", "scenes"];
+  // the left side's tabs: Places, People, Items, Scenes
+  const TABS = ["places", "people", "items", "scenes"];
   let tab = "places";
 
   function setTab(nextTab) {
@@ -1503,6 +1759,7 @@
     const chosen = PERSON_SIZES[size] ? size : "medium";
     saveSettings({ personSize: chosen });
     peopleGrid.style.setProperty("--person-size", PERSON_SIZES[chosen]);
+    itemsGrid.style.setProperty("--person-size", PERSON_SIZES[chosen]);
     document.querySelectorAll(".people-size button").forEach(function (button) {
       button.setAttribute("aria-pressed", String(button.dataset.size === chosen));
     });
@@ -1563,11 +1820,302 @@
         refreshPeopleFilters();
         renderPeople();
       }
+
+      if (changed || !itemsLoaded) {
+        await loadItems();
+      }
     } catch (error) {
       return;
     }
 
     document.querySelectorAll(".thumb").forEach(markCutout);
+  }
+
+  // ---------- items pane ----------
+
+  async function loadItems() {
+    const loadedFor = campaign;
+    const loaded = await fetch(withCampaign("/api/items")).then(function (response) {
+      return response.json();
+    });
+
+    if (loadedFor !== campaign) {
+      return;
+    }
+
+    items = loaded;
+    itemsLoaded = true;
+    renderItems();
+  }
+
+  function itemWithPicture(imageName) {
+    return items.find(function (item) {
+      return item.pictures.some(function (entry) {
+        return entry.image === imageName;
+      });
+    });
+  }
+
+  // Items in the open file ("Show the players" boxes: [!info] boxes, or any box showing an item's picture),
+  // then items whose note puts them at the place on screen.
+  function itemsInScene() {
+    const found = [];
+    const seen = new Set();
+    const sources = fileProps.slice();
+    flatList.forEach(function (entry) {
+
+      if (itemWithPicture(entry.image)) {
+        sources.push({ heading: "", label: entry.label, images: [entry.image] });
+      }
+    });
+    sources.forEach(function (entry) {
+      const match = entry.images.map(itemWithPicture).find(Boolean);
+      const key = match ? "note:" + match.name : "file:" + entry.images[0];
+
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+
+      if (match) {
+        const filePictures = match.pictures.filter(function (picture) {
+          return entry.images.includes(picture.image);
+        });
+        found.push(Object.assign({}, match, {
+          // the box's label is the name the players know at that point
+          name: entry.label || match.name,
+          group: entry.heading || "In the open file",
+          pictures: filePictures.length ? filePictures : match.pictures
+        }));
+        return;
+      }
+
+      found.push({
+        name: entry.label,
+        noteName: "",
+        found: true,
+        location: "",
+        group: entry.heading || "In the open file",
+        pictures: entry.images.map(function (imageName) {
+          return { image: imageName, cutout: hasCutout(imageName) };
+        })
+      });
+    });
+    const placeNames = editing().images.map(placeNameOf).map(function (name) {
+      return name.toLowerCase();
+    });
+
+    if (mode === "place" && locations[Number(placeSelect.value)]) {
+      placeNames.push(locations[Number(placeSelect.value)].name.toLowerCase());
+    }
+
+    items.forEach(function (item) {
+      const where = (item.location || "").toLowerCase();
+      const place = placeNames.find(function (name) {
+        return name && where.startsWith(name);
+      });
+
+      if (!place || seen.has("note:" + item.name)) {
+        return;
+      }
+
+      seen.add("note:" + item.name);
+      found.push(Object.assign({}, item, { group: "At " + item.location.split(",")[0].trim() }));
+    });
+    return found;
+  }
+
+  function setItemScope(nextScope) {
+    itemScope = nextScope;
+    saveSettings({ itemScope: itemScope });
+    itemScopeSceneButton.setAttribute("aria-pressed", String(itemScope === "scene"));
+    itemScopeAllButton.setAttribute("aria-pressed", String(itemScope === "all"));
+    renderItems();
+  }
+
+  function renderItems() {
+    const scrollTop = itemsGrid.scrollTop;
+    let pool = items;
+
+    if (itemScope === "scene") {
+      pool = itemsInScene();
+
+      if (!pool.length) {
+        itemsCount.textContent = "0 of " + items.length;
+        itemsGrid.innerHTML = "";
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = itemsLoaded && !items.length
+          ? "No items yet. Set item_notes or item_images for this campaign in campaigns.json (see the README)."
+          : "No items in the open file or at the place on screen.";
+        itemsGrid.appendChild(empty);
+
+        if (items.length) {
+          const everything = document.createElement("button");
+          everything.textContent = "Show all items";
+          everything.addEventListener("click", function () {
+            setItemScope("all");
+          });
+          itemsGrid.appendChild(everything);
+        }
+
+        return;
+      }
+    }
+
+    const words = itemsFilter.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const shown = pool.filter(function (item) {
+      const haystack = [item.name, item.noteName || "", item.location || ""].join(" ").toLowerCase();
+
+      if (itemsFound.value === "found" && !item.found) {
+        return false;
+      }
+
+      if (itemsFound.value === "unfound" && item.found) {
+        return false;
+      }
+
+      return words.every(function (word) {
+        return haystack.includes(word);
+      });
+    });
+    itemsCount.textContent = shown.length + " of " + items.length;
+    itemsGrid.innerHTML = "";
+
+    if (!shown.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = items.length ? "No item matches." : "No items yet. Set item_notes or item_images for this campaign in campaigns.json (see the README).";
+      itemsGrid.appendChild(empty);
+      return;
+    }
+
+    const groups = new Map();
+    const byScene = itemScope === "scene";
+    shown.forEach(function (item) {
+      const key = byScene ? item.group : (item.found ? "Found" : "Not found yet");
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+
+      groups.get(key).push(item);
+    });
+    const ordered = byScene ? [...groups.keys()] : ["Found", "Not found yet"].filter(function (key) {
+      return groups.has(key);
+    });
+    ordered.forEach(function (key) {
+      const section = document.createElement("section");
+      section.className = "scene";
+      const heading = document.createElement("h3");
+      heading.textContent = key;
+      heading.title = key;
+      section.appendChild(heading);
+      const cards = document.createElement("div");
+      cards.className = "items person-grid";
+      const groupItems = groups.get(key);
+
+      if (!byScene) {
+        groupItems.sort(function (first, second) {
+          return first.name.localeCompare(second.name);
+        });
+      }
+
+      groupItems.forEach(function (item) {
+        cards.appendChild(makeItemCard(item));
+      });
+      section.appendChild(cards);
+      itemsGrid.appendChild(section);
+    });
+    itemsGrid.scrollTop = scrollTop;
+    markPictures();
+  }
+
+  function makeItemCard(item) {
+    const card = document.createElement("div");
+    card.className = "item person-card item-card" + (item.found ? "" : " dim");
+    const stage = document.createElement("div");
+    stage.className = "person-stage";
+    const name = document.createElement("span");
+    name.className = "person-name";
+    name.textContent = item.name;
+    const fullPicture = document.createElement("button");
+    fullPicture.className = "portrait";
+    fullPicture.textContent = "Picture";
+    fullPicture.title = "Show the whole picture as the scene (for letters and maps the players should read)";
+    fullPicture.addEventListener("click", function () {
+      const images = item.pictures.map(function (picture) {
+        return picture.image;
+      });
+      showPicture(images.slice(0, 2), item.name, false);
+    });
+    const details = document.createElement("span");
+    details.className = "where";
+    const detailParts = [];
+
+    if (item.noteName && item.noteName !== item.name) {
+      detailParts.push("note: " + item.noteName);
+    }
+
+    if (item.location) {
+      detailParts.push(item.location);
+    }
+
+    if (!item.found) {
+      const unfound = document.createElement("span");
+      unfound.className = "unmet-tag";
+      unfound.textContent = "not found · ";
+      details.appendChild(unfound);
+    }
+
+    details.appendChild(document.createTextNode(detailParts.join(" · ")));
+    card.title = item.name + (item.found ? "" : " · not found yet") + (detailParts.length ? " · " + detailParts.join(" · ") : "");
+    const caption = document.createElement("div");
+    caption.className = "person-caption";
+    caption.appendChild(name);
+    caption.appendChild(details);
+    const altPictures = document.createElement("div");
+    altPictures.className = "alt-poses";
+    item.pictures.forEach(function (picture, index) {
+      const button = document.createElement("button");
+      button.className = "pose " + (index === 0 ? "main" : "alt") + (picture.cutout ? "" : " no-cut");
+      button.dataset.image = picture.image;
+      button.title = picture.cutout
+        ? "Reveal " + item.name + " over the scene"
+        : "Reveal " + item.name + " over the scene (no cut-out yet: shown as a picture)";
+      const image = document.createElement("img");
+      image.loading = "lazy";
+      image.src = picture.cutout ? cutoutUrl(picture.image) : imageUrl(picture.image);
+      image.alt = item.name;
+      button.appendChild(image);
+
+      if (!picture.cutout) {
+        const mark = document.createElement("span");
+        mark.className = "cut-mark";
+        mark.textContent = "no cut-out";
+        button.appendChild(mark);
+      }
+
+      button.addEventListener("click", function () {
+        toggleItem(picture.image, item.name);
+      });
+
+      if (index === 0) {
+        stage.appendChild(button);
+      } else {
+        altPictures.appendChild(button);
+      }
+    });
+    stage.appendChild(caption);
+    stage.appendChild(fullPicture);
+    card.appendChild(stage);
+
+    if (item.pictures.length > 1) {
+      card.appendChild(altPictures);
+    }
+
+    return card;
   }
 
   function placeOf(person) {
@@ -1613,6 +2161,8 @@
       return entry.image;
     }), fileCast.map(function (entry) {
       return entry.images.join("+");
+    }), fileProps.map(function (entry) {
+      return "item:" + entry.images.join("+");
     }));
   }
 
@@ -2014,6 +2564,8 @@
     saveSettings({ campaign: campaign });
     document.getElementById("title").textContent = campaign + " Screen";
     people = [];
+    items = [];
+    itemsLoaded = false;
     loadCutouts();
     loadSavedScenes();
     setMode(mode);
@@ -2064,6 +2616,21 @@
   peopleMet.addEventListener("change", function () {
     saveSettings({ peopleMet: peopleMet.value });
     renderPeople();
+  });
+
+  itemScopeSceneButton.addEventListener("click", function () {
+    setItemScope("scene");
+  });
+
+  itemScopeAllButton.addEventListener("click", function () {
+    setItemScope("all");
+  });
+
+  itemsFilter.addEventListener("input", renderItems);
+
+  itemsFound.addEventListener("change", function () {
+    saveSettings({ itemsFound: itemsFound.value });
+    renderItems();
   });
 
   prepareToggle.addEventListener("click", function () {
@@ -2170,6 +2737,7 @@
       label: state.label || "",
       campaign: state.campaign || campaign,
       people: state.people || [],
+      item: state.item || null,
       fx: state.fx || [],
       fxLevel: state.fxLevel || "medium",
     };
@@ -2267,6 +2835,7 @@
         images: state.images,
         label: state.label,
         people: state.people || [],
+        item: state.item || null,
         fx: state.fx || [],
         fxLevel: state.fxLevel || "medium",
         fill: fillOn,
@@ -2303,6 +2872,7 @@
       label: scene.label || saved.name,
       campaign: campaign,
       people: JSON.parse(JSON.stringify(scene.people || [])),
+      item: scene.item ? Object.assign({}, scene.item) : null,
       fx: scene.fx || [],
       fxLevel: scene.fxLevel || "medium",
     };
@@ -2360,6 +2930,11 @@
       placeActor(actor, image, placement(person, index, people.length));
       sceneBox.appendChild(actor);
     });
+
+    if (scene.item) {
+      drawShowpiece(stageBox, scene.item, campaign, false);
+    }
+
     const filters = [];
     effects.forEach(function (kind) {
       const look = MOOD_PREVIEWS[kind];
@@ -2557,7 +3132,7 @@
       statusLine.classList.add("ok");
       soundOut.resync();
 
-      if (live.images.length || (live.people || []).length || (live.fx || []).length) {
+      if (live.images.length || (live.people || []).length || live.item || (live.fx || []).length) {
         send();
       }
     }
@@ -2614,7 +3189,14 @@
     }
 
     if (event.key === "x" || event.key === "X") {
-      clearPeople();
+      clearStage();
+    }
+
+    if (event.key === "i" || event.key === "I") {
+      event.preventDefault();
+      setTab("items");
+      itemsFilter.focus();
+      itemsFilter.select();
     }
 
     if (event.key === "/") {
@@ -2770,6 +3352,10 @@
   scope = settings.peopleScope === "all" ? "all" : "scene";
   scopeSceneButton.setAttribute("aria-pressed", String(scope === "scene"));
   scopeAllButton.setAttribute("aria-pressed", String(scope === "all"));
+  itemsFound.value = settings.itemsFound || "all";
+  itemScope = settings.itemScope === "all" ? "all" : "scene";
+  itemScopeSceneButton.setAttribute("aria-pressed", String(itemScope === "scene"));
+  itemScopeAllButton.setAttribute("aria-pressed", String(itemScope === "all"));
   fillOn = Boolean(settings.fill);
   fillToggle.setAttribute("aria-pressed", String(fillOn));
   fillToggle.textContent = "Fill screen: " + (fillOn ? "on" : "off") + " (F)";

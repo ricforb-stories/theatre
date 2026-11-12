@@ -23,6 +23,10 @@
       "npc_notes": "NPCs",
       "_portrait_images": "Folder with the NPC portraits, used to make the see-through cut-outs.",
       "portrait_images": "NPCs/Images",
+      "_item_notes": "Optional: folder with one note per item (sword, amulet, letter): picture embedded in the note, plus 'found', and 'card_name' or 'location' if you like. Leave out if you have none.",
+      "item_notes": "Items",
+      "_item_images": "Optional: folder with the item pictures named '<Item> 1.png', used for the see-through cut-outs. A picture here without a note still shows up as an item.",
+      "item_images": "Items/Images",
       "_skip_folders": "Folders to ignore when searching for pictures (rulebooks, templates).",
       "skip_folders": [
         "Templates"
